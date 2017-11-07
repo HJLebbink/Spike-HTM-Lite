@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<ProjectProperties xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <DataSource>
+    <BitMapType>true</BitMapType>
+    <AlphanumericType>false</AlphanumericType>
+    <FileSource>true</FileSource>
+    <File>F:\Users\David_Ragazzi\Desktop\Projects\OpenHTM\Binaries\Data\AAAX_16x16\input.txt</File>
+    <DatabaseSource>false</DatabaseSource>
+    <DatabaseConnectionString />
+    <DatabaseTable />
+    <DatabaseField />
+  </DataSource>
+</ProjectProperties>

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{ceddb2d3-4d2d-437f-b7d4-cbd79981e96a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assert.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="log.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="profiler.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="random.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="timing.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

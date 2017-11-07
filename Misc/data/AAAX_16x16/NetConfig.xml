@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<NetConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <_UsingExperimentalVersion>false</_UsingExperimentalVersion>
+  <RegionParams>
+    <RegionParam>
+      <RegionActivated>true</RegionActivated>
+      <SpatialLearning>false</SpatialLearning>
+      <TemporalLearning>true</TemporalLearning>
+      <InputWidth>16</InputWidth>
+      <InputHeight>16</InputHeight>
+      <SegmentActivateThreshold>1</SegmentActivateThreshold>
+      <NewNumberSynapses>1</NewNumberSynapses>
+      <CellsPerColumn>4</CellsPerColumn>
+      <HardcodedSpatial>true</HardcodedSpatial>
+      <ColumnSizeX>12</ColumnSizeX>
+      <ColumnSizeY>12</ColumnSizeY>
+      <PercentageInputCol>15</PercentageInputCol>
+      <PercentageMinOverlap>10</PercentageMinOverlap>
+      <PercentageLocalActivity>10</PercentageLocalActivity>
+      <LocalityRadius>5</LocalityRadius>
+    </RegionParam>
+  </RegionParams>
+  <SynapseParams>
+    <InitialPermanence>0.2</InitialPermanence>
+    <ConnectedPermanence>0.2</ConnectedPermanence>
+    <PermanenceIncrease>0.05</PermanenceIncrease>
+    <PermanenceDecrease>0.04</PermanenceDecrease>
+  </SynapseParams>
+</NetConfig>
