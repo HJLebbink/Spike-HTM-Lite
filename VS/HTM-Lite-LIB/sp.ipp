@@ -337,7 +337,7 @@ namespace htm
 					{
 						const int overlap_ref = overlaps_ref[column_i];
 						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512);
+						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
 					}
 					#endif
 				}
@@ -393,11 +393,11 @@ namespace htm
 					{
 						const int overlap_ref = overlaps_ref[column_i];
 						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512);
+						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512_small_epi32:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
 					}
 					#endif
 				}
-
+				// not much faster than calc_overlap_avx512_small_epi32
 				void calc_overlap_avx512_small_epi16(
 					const Layer& layer,
 					const Dynamic_Param& param,
@@ -423,28 +423,32 @@ namespace htm
 						auto permanence_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
 						auto origin_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
 
-						__m512i overlapA = _mm512_setzero_si512(); // tontains 32 overlap values of 16bits
-						__m512i overlapB = _mm512_setzero_si512(); // tontains 32 overlap values of 16bits
+						__m512i overlap_epu16_AB = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
+						__m512i overlap_epu16_CD = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
 
 						for (int block = 0; block < n_blocks; ++block)
 						{
 							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_ptr[block], connected_threshold_simd, _MM_CMPINT_NLE);
 
 							const __mmask32 mask_32_A = static_cast<__mmask32>(connected_mask_64 >> (0 * 32));
-							const __m512i origin0 = origin_ptr[(block * 4) + 0];
-							const __m512i origin1 = origin_ptr[(block * 4) + 1];
-							const __m512i originA = _mm512_or_epi32(origin0, _mm512_bslli_epi128(origin1, 2));
-							overlapA = _mm512_adds_epu16(overlapA, get_sensors_epi16(mask_32_A, originA, active_sensors_simd));
+							const __m512i origin_epi32_A = origin_ptr[(block * 4) + 0];
+							const __m512i origin_epi32_B = origin_ptr[(block * 4) + 1];
+							const __m512i origin_epu16_A = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_A));
+							const __m512i origin_epu16_B = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_B));
+							const __m512i origin_epu16_AB = _mm512_shuffle_i64x2(origin_epu16_A, origin_epu16_B, 0b01000100);
+							overlap_epu16_AB = _mm512_adds_epu16(overlap_epu16_AB, get_sensors_epi16(mask_32_A, origin_epu16_AB, active_sensors_simd));
 
 							const __mmask32 mask_32_B = static_cast<__mmask32>(connected_mask_64 >> (1 * 32));
-							const __m512i origin2 = origin_ptr[(block * 4) + 2];
-							const __m512i origin3 = origin_ptr[(block * 4) + 3];
-							const __m512i originB = _mm512_or_epi32(origin2, _mm512_bslli_epi128(origin3, 2));
-							overlapB = _mm512_adds_epu16(overlapB, get_sensors_epi16(mask_32_B, originB, active_sensors_simd));
+							const __m512i origin_epi32_C = origin_ptr[(block * 4) + 2];
+							const __m512i origin_epi32_D = origin_ptr[(block * 4) + 3];
+							const __m512i origin_epu16_C = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_C));
+							const __m512i origin_epu16_D = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_D));
+							const __m512i origin_epu16_CD = _mm512_shuffle_i64x2(origin_epu16_C, origin_epu16_D, 0b01000100);
+							overlap_epu16_CD = _mm512_adds_epu16(overlap_epu16_CD, get_sensors_epi16(mask_32_B, origin_epu16_CD, active_sensors_simd));
 						}
-						const __m512i overlap_1 = _mm512_adds_epu16(overlapA, overlapB);
-						const __m512i overlap_2 = _mm512_add_epi32(_mm512_and_epi32(overlap_1, _mm512_set1_epi32(0xFFFF)), _mm512_srli_epi32(overlap_1, 16));
-						const int overlap_int = _mm512_reduce_add_epi32(overlap_2);
+						const __m512i overlap_epu16 = _mm512_adds_epu16(overlap_epu16_AB, overlap_epu16_CD);
+						const __m512i overlap_epi32 = _mm512_add_epi32(_mm512_and_epi32(overlap_epu16, _mm512_set1_epi32(0xFFFF)), _mm512_srli_epi32(overlap_epu16, 16));
+						const int overlap_int = _mm512_reduce_add_epi32(overlap_epi32);
 
 						overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
 					}
@@ -456,7 +460,14 @@ namespace htm
 					{
 						const int overlap_ref = overlaps_ref[column_i];
 						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512);
+						if (overlap_ref != overlap_avx512)
+						{
+							log_ERROR("SP:calc_overlap_avx512_small_epi16:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						}
+						else
+						{
+							//log_INFO("SP:calc_overlap_avx512_small_epi16:: EQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						}
 					}
 					#endif
 				}
