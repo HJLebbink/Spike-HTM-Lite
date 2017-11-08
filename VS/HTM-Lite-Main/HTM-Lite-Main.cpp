@@ -31,6 +31,20 @@ using namespace htm::types;
 
 inline void test_run()
 {
+	// static properties: properties that need to be known at compile time:
+
+	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	const int N_BLOCKS = 100 * 8;
+	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
+	const int N_BITS_CELL_LOCAL = 4;
+	const int SENSOR_DIM1_LOCAL = 20;
+	const int SENSOR_DIM2_LOCAL = 20;
+	const arch_t ARCH = arch_t::AVX512;
+	const int HISTORY_SIZE = 8;
+
+	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param;
 	param.n_time_steps = 200;
 	param.n_times = 1;
@@ -39,11 +53,13 @@ inline void test_run()
 	param.MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
+
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
 
-	Layer layer;
-	auto data = encoder::encode_pass_through(input_filename);
+	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
+	Layer<P> layer;
+	auto data = encoder::encode_pass_through<P>(input_filename);
 
 	const bool LEARN = true;
 	htm::layer::run<LEARN>(data, layer, param);
@@ -51,6 +67,22 @@ inline void test_run()
 
 inline void test_swarm()
 {
+	// static properties: properties that need to be known at compile time:
+
+	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	const int N_BLOCKS = 100 * 8;
+	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
+	const int N_BITS_CELL_LOCAL = 4;
+	const int SENSOR_DIM1_LOCAL = 20;
+	const int SENSOR_DIM2_LOCAL = 20;
+	const arch_t ARCH = arch_t::AVX512;
+	const int HISTORY_SIZE = 8;
+
+	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
+
+
 	Dynamic_Param param;
 	param.n_time_steps = 500;
 	param.n_times = 1;
@@ -74,7 +106,7 @@ inline void test_swarm()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-	htm::swarm::run_ga(input_filename, param, options);
+	htm::swarm::run_ga<P>(input_filename, param, options);
 }
 
 int main()

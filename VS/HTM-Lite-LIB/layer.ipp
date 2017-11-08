@@ -46,8 +46,9 @@ namespace htm
 		{
 			//return the number of times a sensor is predicteed.
 			// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
+			template <typename P>
 			void get_predicted_sensor_activity(
-				const Layer& layer,
+				const Layer<P>& layer,
 				const int sensor_threshold,
 				const Dynamic_Param& param,
 				//out
@@ -59,7 +60,7 @@ namespace htm
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						const Column& column = layer[column_i];
+						const auto& column = layer[column_i];
 						const bool column_is_predicted = column.active_dd_segments.any_current();
 						if (column_is_predicted)
 						{
@@ -82,7 +83,7 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const Column& column = layer[column_i];
+							const auto& column = layer[column_i];
 							predicted_columns[column_i] = column.active_dd_segments.any_current();
 						}
 
@@ -160,18 +161,19 @@ namespace htm
 				}
 			}
 
+			template <typename P>
 			int calc_mismatch(
 				const int t,
 				const Dynamic_Param& param,
 				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
-				const Layer& layer)
+				const Layer<P>& layer)
 			{
 				Bitset_Compact<P::N_SENSORS> actual_sensors;
 				Bitset_Compact<P::N_SENSORS> predicted_sensors;
 
 				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
 				get_predicted_sensor_activity(layer, sensor_threshold, param, predicted_sensors);
-				encoder::get_sensor_activity(t + 1, data, actual_sensors);
+				encoder::get_sensor_activity<P>(t + 1, data, actual_sensors);
 
 				int mismatch = 0;
 				for (auto i = 0; i < P::N_SENSORS; ++i)
@@ -181,6 +183,7 @@ namespace htm
 				return mismatch;
 			}
 
+			template <typename P>
 			void add_sensor_noise(
 				Bitset_Compact<P::N_SENSORS>& sensor_activity)
 			{
@@ -193,8 +196,9 @@ namespace htm
 				}
 			}
 
+			template <typename P>
 			void load_inferred_sensor_activity(
-				const Layer& layer,
+				const Layer<P>& layer,
 				const Dynamic_Param& param,
 				const Bitset<P::N_COLUMNS>& active_columns,
 				// out
@@ -220,8 +224,9 @@ namespace htm
 				}
 			}
 
+			template <typename P>
 			void get_projected_boost_factors(
-				const Layer& layer,
+				const Layer<P>& layer,
 				const Dynamic_Param& param,
 				std::vector<float>& projected_boost_factor) // N_SENSORS
 			{
@@ -234,7 +239,7 @@ namespace htm
 
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-					const Column& column = layer[column_i];
+					const auto& column = layer[column_i];
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
 						if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
@@ -254,9 +259,10 @@ namespace htm
 				}
 			}
 
+			template <typename P>
 			void show_progress(
 				const int t,
-				const Layer& layer,
+				const Layer<P>& layer,
 				const Dynamic_Param& param,
 				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
 				const Bitset<P::N_COLUMNS>& active_columns)
@@ -273,7 +279,7 @@ namespace htm
 						std::cout << "=====" << std::endl;
 
 						get_predicted_sensor_activity(layer, sensor_threshold, param, sensor_activity_local1);
-						encoder::get_sensor_activity(t + 1, data, sensor_activity_local2);
+						encoder::get_sensor_activity<P>(t + 1, data, sensor_activity_local2);
 
 						std::cout << "at t = " << t << ": predicted sensor activity at (future) t = " << (t + 1) << ":" << std::endl;
 						std::cout << std::setw(P::N_SENSORS_DIM1) << "predicted";
@@ -282,7 +288,7 @@ namespace htm
 						std::cout << " | ";
 						std::cout << std::setw(P::N_SENSORS_DIM1) << "mismatch";
 						std::cout << std::endl;
-						std::cout << print::print_sensor_activity2(sensor_activity_local1, sensor_activity_local2, P::N_SENSORS_DIM1);
+						std::cout << print::print_sensor_activity2<P>(sensor_activity_local1, sensor_activity_local2, P::N_SENSORS_DIM1);
 					}
 
 					// print the boost values
@@ -299,10 +305,10 @@ namespace htm
 			}
 		}
 
-		template <bool LEARN>
+		template <bool LEARN, typename P>
 		int run(
 			const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
-			Layer& layer,
+			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
 			Bitset_Compact<P::N_SENSORS> sensor_activity_local;
@@ -324,20 +330,20 @@ namespace htm
 					layer.active_cells.advance_time();
 					layer.winner_cells.advance_time();
 
-					encoder::get_sensor_activity(time, data, sensor_activity_local);
+					encoder::get_sensor_activity<P>(time, data, sensor_activity_local);
 					//priv::add_sensor_noise(sensor_activity_local);
 
 					#if _DEBUG
 					if (false) log_INFO("layer:run: sensor activity IN:\n", print::print_sensor_activity(sensor_activity_local, P::N_SENSORS_DIM1));
 					#endif
 
-					sp::compute_sp<LEARN>(
+					sp::compute_sp<LEARN, P>(
 						sensor_activity_local,
 						layer,
 						param,
 						active_columns_local);
 
-					tp::compute_tp<LEARN>(
+					tp::compute_tp<LEARN, P>(
 						layer,
 						time,
 						param,

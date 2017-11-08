@@ -611,6 +611,7 @@ namespace htm
 
 		//========================================================================
 		// Column structure with data that is used only by the column.
+		template <typename P>
 		struct Column
 		{
 			using Active_Segments = History<Segments_Set, 2>;
@@ -657,9 +658,10 @@ namespace htm
 		};
 
 		//========================================================================
+		template <typename P>
 		struct Layer
 		{
-			std::vector<Column> data;
+			std::vector<Column<P>> data;
 
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
 
@@ -688,7 +690,7 @@ namespace htm
 				//init permanence values
 				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-					Column& column = this->data[column_i];
+					auto& column = this->data[column_i];
 					column.id = column_i;
 
 					// reset pd synapses
@@ -748,11 +750,11 @@ namespace htm
 
 			#pragma endregion
 
-			Column& operator[] (int i)
+			Column<P>& operator[] (int i)
 			{
 				return this->data[i];
 			}
-			const Column& operator[] (int i) const
+			const Column<P>& operator[] (int i) const
 			{
 				return this->data[i];
 			}

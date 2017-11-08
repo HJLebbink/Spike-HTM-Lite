@@ -81,6 +81,7 @@ namespace htm
 			return result.str();
 		}
 
+		template <typename P>
 		std::string print_active_cells(
 			const Bitset_Sparse<P::N_CELLS>& cells)
 		{
@@ -128,7 +129,7 @@ namespace htm
 			return result.str();
 		}
 
-
+		template <typename P>
 		std::string print_active_cells(
 			const Bitset_Compact<P::N_CELLS>& cells)
 		{
@@ -242,10 +243,10 @@ namespace htm
 			return result.str();
 		}
 
-		template <int N_SENSORS>
+		template <typename P>
 		std::string print_sensor_activity2(
-			const Bitset_Compact<N_SENSORS>& sensor_activity1,
-			const Bitset_Compact<N_SENSORS>& sensor_activity2,
+			const Bitset_Compact<P::N_SENSORS>& sensor_activity1,
+			const Bitset_Compact<P::N_SENSORS>& sensor_activity2,
 			const int width)
 		{
 			std::ostringstream result;
@@ -254,24 +255,24 @@ namespace htm
 			auto counter2 = 0;
 			auto counter3 = 0;
 
-			while (counter1 < N_SENSORS)
+			while (counter1 < P::N_SENSORS)
 			{
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter1 < N_SENSORS) ? ((sensor_activity1.get(counter1)) ? "X" : ".") : "-");
+					result << ((counter1 < P::N_SENSORS) ? ((sensor_activity1.get(counter1)) ? "X" : ".") : "-");
 					counter1++;
 				}
 				result << " | ";
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter2 < N_SENSORS) ? ((sensor_activity2.get(counter2)) ? "X" : ".") : "-");
+					result << ((counter2 < P::N_SENSORS) ? ((sensor_activity2.get(counter2)) ? "X" : ".") : "-");
 					counter2++;
 				}
 				result << " | ";
 
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter3 < N_SENSORS) ? ((sensor_activity1.get(counter3) == sensor_activity2.get(counter3)) ? "." : "X") : "-");
+					result << ((counter3 < P::N_SENSORS) ? ((sensor_activity1.get(counter3) == sensor_activity2.get(counter3)) ? "." : "X") : "-");
 					counter3++;
 				}
 				result << "\n";
@@ -279,8 +280,9 @@ namespace htm
 			return result.str();
 		}
 
+		template <typename P>
 		std::string print_boost_factors(
-			const Layer& layer,
+			const Layer<P>& layer,
 			const int width)
 		{
 			std::ostringstream result;
@@ -288,7 +290,7 @@ namespace htm
 			int column_i = 0;
 			while (column_i < P::N_COLUMNS)
 			{
-				const Column& column = layer[column_i];
+				const auto& column = layer[column_i];
 				for (int i1 = 0; i1 < width; ++i1)
 				{
 					if (column_i < P::N_COLUMNS)
@@ -302,8 +304,9 @@ namespace htm
 			return result.str();
 		}
 
+		template <typename P>
 		std::string print_dd_synapses(
-			const Column& column)
+			const Column<P>& column)
 		{
 			std::ostringstream result;
 			const auto n_segments = column.dd_segment_count;
@@ -335,20 +338,22 @@ namespace htm
 			return result.str();
 		}
 		
+		template <typename P>
 		std::string print_dd_synapses(
-			const Layer& layer)
+			const Layer<P>& layer)
 		{
 			std::ostringstream result;
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 			{
-				const Column& column = layer[column_i];
+				const auto& column = layer[column_i];
 				if (column.dd_segment_count > 0) result << print_dd_synapses(column);
 			}
 			return result.str();
 		}
 		
+		template <typename P>
 		std::string print_pd_synapses(
-			const Column& column)
+			const Column<P>& column)
 		{
 			std::ostringstream result;
 			//const auto n_segments = column.dd_segment_count;
@@ -374,8 +379,9 @@ namespace htm
 			return result.str();
 		}
 
+		template <typename P>
 		std::string print_pd_synapses(
-			const Layer& layer)
+			const Layer<P>& layer)
 		{
 			std::ostringstream result;
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)

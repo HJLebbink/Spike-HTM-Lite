@@ -34,6 +34,7 @@ namespace htm
 		using namespace ::tools::log;
 		using namespace htm::types;
 
+		template <typename P>
 		std::vector<Bitset_Compact<P::N_SENSORS>> encode_pass_through(
 			const std::string& filename)
 		{
@@ -105,10 +106,10 @@ namespace htm
 			return data;
 		}
 
-		template <int N_SENSORS>
+		template <typename P>
 		void get_sensor_activity(
 			const int t,
-			const std::vector<Bitset_Compact<N_SENSORS>>& data,
+			const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
 			Bitset_Compact<P::N_SENSORS>& sensor_activity)
 		{
 			const int time_step_max = static_cast<int>(data.size());

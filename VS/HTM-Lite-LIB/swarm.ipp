@@ -269,9 +269,10 @@ namespace htm
 				param.TP_DD_PREDICTED_SEGMENT_DEC = static_cast<signed char>(TP_DD_PREDICTED_SEGMENT_DEC_dist(engine));
 			}
 
+			template <typename P>
 			void do_work(
 				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
-				Layer& layer,
+				Layer<P>& layer,
 				Swarm_Options& options,
 				Configuration& result)
 			{
@@ -280,7 +281,7 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 					result.param.progress = false;
 					result.param.quiet = true;
-					const int total_mismatch = htm::layer::run<true>(data, layer, result.param);
+					const int total_mismatch = htm::layer::run<true, P>(data, layer, result.param);
 					if (result.mismatch != Configuration::MISMATCH_INVALID)
 					{
 						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
@@ -291,20 +292,22 @@ namespace htm
 				}
 			}
 
+			template <typename P>
 			void do_work_all(
 				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration>& results)
 			{
-				Layer layer;
+				Layer<P> layer;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(data, layer, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(data, layer, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work<P>(data, layer, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work<P>(data, layer, options, results[i]);
 			}
 		}
 
+		template <typename P>
 		std::vector<Configuration> run_random(
 			const std::string& input_filename,
 			const Dynamic_Param& param,
@@ -327,17 +330,18 @@ namespace htm
 				results.push_back(Configuration(param_local));
 			}
 
-			const auto data = encoder::encode_pass_through(input_filename);
+			const auto data = encoder::encode_pass_through<P>(input_filename);
 
 			std::vector<std::thread> workers;
 			for (int thread = 0; thread < nThreads; ++thread)
 			{
-				workers.push_back(std::thread(priv::do_work_all, data, thread * 4, std::ref(options), std::ref(results)));
+				workers.push_back(std::thread(priv::do_work_all<P>, data, thread * 4, std::ref(options), std::ref(results)));
 			}
 			for (auto& t : workers) if (t.joinable()) t.join();
 			return results;
 		}
 
+		template <typename P>
 		std::vector<Configuration> run_ga(
 			const std::string& input_filename,
 			const Dynamic_Param& param,
@@ -353,9 +357,9 @@ namespace htm
 			std::default_random_engine random_engine(r());
 			std::uniform_int_distribution<int> individual_dist(0, options.population_size-1);
 
-			const auto data = encoder::encode_pass_through(input_filename);
+			const auto data = encoder::encode_pass_through<P>(input_filename);
 
-			std::vector<Configuration> pool = run_random(input_filename, param, options);
+			std::vector<Configuration> pool = run_random<P>(input_filename, param, options);
 			std::vector<Configuration> results;
 			std::vector<std::thread> workers;
 
@@ -384,7 +388,7 @@ namespace htm
 				workers.clear();
 				for (int thread = 0; thread < nThreads; ++thread)
 				{
-					workers.push_back(std::thread(priv::do_work_all, data, thread * 4, std::ref(options), std::ref(results)));
+					workers.push_back(std::thread(priv::do_work_all<P>, data, thread * 4, std::ref(options), std::ref(results)));
 				}
 				for (auto& t : workers) if (t.joinable()) t.join();
 

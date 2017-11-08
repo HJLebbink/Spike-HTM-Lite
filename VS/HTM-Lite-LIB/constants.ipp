@@ -38,30 +38,29 @@ namespace htm
 		X64, AVX512
 	};
 
-	static const arch_t ARCH = arch_t::X64;
-	//static const arch_t ARCH = arch_t::AVX512;
-
 	static constexpr bool SP_GATHER = true;
 
 	using Permanence = int8_t; // = signed char
 
 	//========================================================================
 	template <
-		int N_COLUMNS_IN,
-		int N_BITS_CELL_IN,
-		int N_SENSORS_DIM1_IN,
-		int N_SENSORS_DIM2_IN>
-	class StaticParam
+		int N_COLUMNS_IN = 512,
+		int N_BITS_CELL_IN = 4,
+		int N_SENSORS_DIM1_IN = 20,
+		int N_SENSORS_DIM2_IN = 20,
+		arch_t ARCH_IN = arch_t::X64,
+		int HISTORY_SIZE_IN = 2>
+	struct Static_Param
 	{
 		static_assert(N_COLUMNS_IN > 0, "ERROR: Parameters: provided N_COLUMNS is too small; min N_COLUMNS is 64.");
 		static_assert((N_COLUMNS_IN & 0b111111) == 0, "ERROR: Parameters: provided N_COLUMNS is not a multiple of 64.");
 		static_assert(N_BITS_CELL_IN > 0, "ERROR: Parameters: provided N_BITS_CELL is too small; min N_BITS_CELL is 1.");
 		static_assert(N_BITS_CELL_IN < 7, "ERROR: Parameters: provided N_BITS_CELL is too large; max N_BITS_CELL is 6.");
 		static_assert(N_SENSORS_DIM1_IN > 0, "ERROR: Parameters: provided N_SENSORS_DIM1_IN is too small; min N_SENSORS_DIM1_IN is 1.");
-		static_assert(N_SENSORS_DIM1_IN > 0, "ERROR: Parameters: provided N_SENSORS_DIM2_IN is too small; min N_SENSORS_DIM2_IN is 1.");
+		static_assert(N_SENSORS_DIM2_IN > 0, "ERROR: Parameters: provided N_SENSORS_DIM2_IN is too small; min N_SENSORS_DIM2_IN is 1.");
+//		static_assert(HISTORY_SIZE_IN < 2, "ERROR: Parameters: provided HISTORY_SIZE_IN is too small; min HISTORY_SIZE_IN is 2.");
+//		static_assert(HISTORY_SIZE_IN > 8, "ERROR: Parameters: provided HISTORY_SIZE_IN is too large; max HISTORY_SIZE_IN is 8.");
 
-		public:
-		#pragma region Static Public Const Fields
 		//========================================================================
 		//Number of columns in layer: Multiple of 64.
 		static constexpr int N_COLUMNS = N_COLUMNS_IN;
@@ -70,7 +69,11 @@ namespace htm
 		static constexpr int N_SENSORS_DIM2 = N_SENSORS_DIM1_IN;
 		static constexpr int N_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 
-		static constexpr int HISTORY_SIZE = 5;
+		// History of 2 means that current and prev 
+		static constexpr int HISTORY_SIZE = HISTORY_SIZE_IN;
+
+		//Whether AVX512 optimized code is used or a reference implementation
+		static constexpr arch_t ARCH = ARCH_IN;
 
 		//========================================================================
 		#pragma region Spacial Pooler constants
@@ -263,16 +266,5 @@ namespace htm
 		}
 	};
 
-
-	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
-	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
-	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 4 * 8;
-	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
-	const int N_BITS_CELL_LOCAL = 4;
-	const int SENSOR_DIM1_LOCAL = 20;
-	const int SENSOR_DIM2_LOCAL = 20;
-
-	using P = StaticParam<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL>;
 
 }

@@ -47,11 +47,12 @@ namespace htm
 		{
 			namespace activate_cells
 			{
+				template <typename P>
 				void select_delay_and_cell_to_learn_on(
 					//in
-					Column& column, // column cannot be readonly due to the random number generator
+					Column<P>& column, // column cannot be readonly due to the random number generator
 					const int segment_i,
-					const Layer::Winner_Cells& winner_cells,
+					const Layer<P>::Winner_Cells& winner_cells,
 					const int select_size,
 					//out
 					std::vector<int>& selected_delay_and_cells) // assumes that selected_cells has sufficient capacity (size >= select_size)
@@ -133,10 +134,11 @@ namespace htm
 						return (result < -128) ? -128 : result;
 					}
 
+					template <typename P>
 					void adapt_segment_ref(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						const auto& dd_synapse_delay_origin_segment = column.dd_synapse_delay_origin[segment_i];
@@ -152,10 +154,11 @@ namespace htm
 						}
 					}
 
+					template <typename P>
 					void adapt_segment_ref(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -196,10 +199,11 @@ namespace htm
 						return _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, delay_mask), delay_mask);
 					}
 
+					template <typename P>
 					void adapt_segment_avx512(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -216,20 +220,20 @@ namespace htm
 						}
 						#endif
 
-						auto permanence_ptr = reinterpret_cast<__m512i *>(column.dd_synapse_permanence[segment_i].data());
-						auto delay_origin_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_delay_origin[segment_i].data());
+						auto permanence_epi8_ptr = reinterpret_cast<__m512i *>(column.dd_synapse_permanence[segment_i].data());
+						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_delay_origin[segment_i].data());
 						auto active_cells_ptr = active_cells.data();
 
-						const __m512i connected_threshold_simd = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
-						const __m512i inc = _mm512_set1_epi8(permanence_inc);
-						const __m512i dec = _mm512_set1_epi8(-permanence_dec);
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
+						const __m512i inc_epi8 = _mm512_set1_epi8(permanence_inc);
+						const __m512i dec_epi8 = _mm512_set1_epi8(-permanence_dec);
 
 						const int n_blocks = tools::n_blocks_64(column.dd_synapse_count[segment_i]);
 
 						for (int block = 0; block < n_blocks; ++block)
 						{
-							const __m512i old_permanence = permanence_ptr[block]; //load 64 permanence values
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(old_permanence, connected_threshold_simd, _MM_CMPINT_NLE);
+							const __m512i old_permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
+							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(old_permanence_epi8, connected_threshold_epi8, _MM_CMPINT_NLE);
 							__mmask64 active_cells_mask_64 = 0;
 							{
 								for (int i = 0; i < 4; ++i)
@@ -237,13 +241,13 @@ namespace htm
 									const __mmask16 connected_mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
 									if (connected_mask_16 != 0)
 									{
-										const __mmask64 tmp_mask_64 = get_sensors_mask(connected_mask_16, delay_origin_ptr[(block * 4) + i], active_cells_ptr);
+										const __mmask64 tmp_mask_64 = get_sensors_mask(connected_mask_16, delay_origin_epi32_ptr[(block * 4) + i], active_cells_ptr);
 										active_cells_mask_64 |= tmp_mask_64 << (i * 16);
 									}
 								}
 							}
-							const __m512i inc_mask = _mm512_mask_blend_epi8(active_cells_mask_64, dec, inc);
-							permanence_ptr[block] = _mm512_mask_adds_epi8(old_permanence, connected_mask_64, old_permanence, inc_mask);
+							const __m512i inc_mask = _mm512_mask_blend_epi8(active_cells_mask_64, dec_epi8, inc_epi8);
+							permanence_epi8_ptr[block] = _mm512_mask_adds_epi8(old_permanence_epi8, connected_mask_64, old_permanence_epi8, inc_mask);
 						}
 
 						#if _DEBUG
@@ -262,24 +266,26 @@ namespace htm
 						#endif
 					}
 
+					template <typename P>
 					void d(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
 						assert_msg(segment_i < column.dd_segment_count, "TP:grow_DD_synapses: segment_i=", segment_i + " is too large. dd_segment_count=", column.dd_segment_count);
 						if (false) log_INFO_DEBUG("TP:adapt_segment: column ", column.id, "; segment_i ", segment_i);
 
-						if (ARCH == arch_t::X64) return adapt_segment_ref(column, segment_i, active_cells, permanence_inc, permanence_dec);
-						if (ARCH == arch_t::AVX512) return adapt_segment_avx512(column, segment_i, active_cells, permanence_inc, permanence_dec);
+						if (P::ARCH == arch_t::X64) return adapt_segment_ref(column, segment_i, active_cells, permanence_inc, permanence_dec);
+						if (P::ARCH == arch_t::AVX512) return adapt_segment_avx512(column, segment_i, active_cells, permanence_inc, permanence_dec);
 					}
 
+					template <typename P>
 					void d(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						assert_msg(segment_i < column.dd_segment_count, "TP:grow_DD_synapses: segment_i=", segment_i, " is too large. dd_segment_count=", column.dd_segment_count);
@@ -291,11 +297,12 @@ namespace htm
 				//Grow new synapses on the provided segment in the provided column
 				namespace grow_DD_synapses
 				{
+					template <typename P>
 					void grow_DD_synapses_ref(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
 						const int n_desired_new_synapses,
-						const Layer::Winner_Cells& winner_cells)
+						const Layer<P>::Winner_Cells& winner_cells)
 					{
 						#if _DEBUG
 						if (false) log_INFO("TP:grow_DD_synapses_ref: before: column ", column.id, "; segment_i ", segment_i, "; dd_synapses:", print::print_dd_synapses(column));
@@ -407,18 +414,20 @@ namespace htm
 						#endif
 					}
 
+					template <typename P>
 					void d(
-						Column& column,
+						Column<P>& column,
 						const int segment_i,
 						const int n_desired_new_synapses,
-						const Layer::Winner_Cells& winner_cells)
+						const Layer<P>::Winner_Cells& winner_cells)
 					{
 						assert_msg(segment_i < column.dd_segment_count, "TP:grow_DD_synapses: segment_i=", segment_i + " is too large. dd_segment_count=", column.dd_segment_count);
 						grow_DD_synapses_ref(column, segment_i, n_desired_new_synapses, winner_cells);
 					}
 				}
 
-				int get_least_used_cell(Column& column)
+				template <typename P>
+				int get_least_used_cell(Column<P>& column)
 				{
 					std::array<int, P::N_CELLS_PC> counter = { 0 };
 
@@ -467,13 +476,14 @@ namespace htm
 					}
 				}
 
+				template <typename P>
 				void create_DD_segment(
-					Column& column,
+					Column<P>& column,
 					const int time,
 					const int n_desired_new_synapses,
 					const Dynamic_Param& param,
 					const int8_t cell,
-					const Layer::Winner_Cells& winner_cells)
+					const Layer<P>::Winner_Cells& winner_cells)
 				{
 					if (n_desired_new_synapses <= 0) return; // nothing to do
 
@@ -549,14 +559,14 @@ namespace htm
 					column.dd_synapse_active_time[new_segment_i] = time;
 				}
 
-				template <bool LEARN>
+				template <bool LEARN, typename P>
 				void burst_column(
-					Column& column,
+					Column<P>& column,
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const Layer::Active_Cells& active_cells,
-					const Layer::Winner_Cells& winner_cells,
+					const Layer<P>::Active_Cells& active_cells,
+					const Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -599,13 +609,13 @@ namespace htm
 					}
 				}
 
-				template <bool LEARN>
+				template <bool LEARN, typename P>
 				void activate_predicted_column(
-					Column& column,
+					Column<P>& column,
 					const Dynamic_Param& param,
 					//in
-					const Layer::Active_Cells& active_cells,
-					const Layer::Winner_Cells& winner_cells,
+					const Layer<P>::Active_Cells& active_cells,
+					const Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -634,10 +644,11 @@ namespace htm
 				}
 
 				//Punishes the segments that incorrectly predicted a column to be active.
+				template <typename P>
 				void punish_predicted_column(
-					Column& column,
+					Column<P>& column,
 					const Dynamic_Param& param,
-					const Layer::Active_Cells& active_cells)
+					const Layer<P>::Active_Cells& active_cells)
 				{
 					//if (param.TP_DD_PREDICTED_SEGMENT_DEC > 0.0)
 					{
@@ -650,15 +661,15 @@ namespace htm
 					}
 				}
 
-				template <bool LEARN>
+				template <bool LEARN, typename P>
 				void activate_cells_per_column(
-					Column& column,
+					Column<P>& column,
 					const int time,
 					const Dynamic_Param& param,
 					//in
 					const bool is_active_column,
-					const Layer::Active_Cells& active_cells,
-					const Layer::Winner_Cells& winner_cells,
+					const Layer<P>::Active_Cells& active_cells,
+					const Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -704,23 +715,23 @@ namespace htm
 					}
 				}
 				
-				template <bool LEARN>
+				template <bool LEARN, typename P>
 				void d(
-					Layer& layer,
+					Layer<P>& layer,
 					const int time,
 					const Dynamic_Param& param,
 					//in
 					const Bitset<P::N_COLUMNS>& active_columns,
 					//inout
-					Layer::Active_Cells& active_cells,
-					Layer::Winner_Cells& winner_cells)
+					Layer<P>::Active_Cells& active_cells,
+					Layer<P>::Winner_Cells& winner_cells)
 				{
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> active_cells_all_2D;
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> winner_cells_all_2D;
 
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						Column& column = layer[column_i];
+						auto& column = layer[column_i];
 						column.active_dd_segments.advance_time();
 						column.matching_dd_segments.advance_time();
 
@@ -747,10 +758,11 @@ namespace htm
 				//Get the number of active and matching synapses of the provided segment in the provided column
 				namespace count_active_potential_DD_synapses
 				{
+					template <typename P>
 					std::tuple<int, int> count_active_potential_DD_synapses_ref(
-						const Column& column,
+						const Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						const auto& dd_synapse_permanence_segment = column.dd_synapse_permanence[segment_i];
@@ -779,17 +791,17 @@ namespace htm
 
 					__m512i get_sensors_epi32(
 						const __mmask16 mask,
-						const __m512i delay_and_origin,
+						const __m512i delay_and_origin_epi32,
 						const void * active_sensors_ptr)
 					{
-						const __m512i global_cell_id = _mm512_and_epi32(delay_and_origin, _mm512_set1_epi32(0x1FFFFFFF));
-						const __m512i byte_pos_in_int = _mm512_and_epi32(delay_and_origin, _mm512_set1_epi32(0b11));
-						const __m512i delay = _mm512_sub_epi32(_mm512_srli_epi32(delay_and_origin, 32 - 3), _mm512_set1_epi32(1));
+						const __m512i global_cell_id = _mm512_and_epi32(delay_and_origin_epi32, _mm512_set1_epi32(0x1FFFFFFF));
+						const __m512i byte_pos_in_int = _mm512_and_epi32(delay_and_origin_epi32, _mm512_set1_epi32(0b11));
+						const __m512i delay_epi32 = _mm512_sub_epi32(_mm512_srli_epi32(delay_and_origin_epi32, 32 - 3), _mm512_set1_epi32(1));
 
 						const __m512i int_addr = _mm512_srli_epi32(global_cell_id, 2);
 						const __m512i sensor_int = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr, active_sensors_ptr, 4);
 						const __m512i pos_in_int = _mm512_slli_epi32(byte_pos_in_int, 3);
-						const __m512i delay_shift = _mm512_add_epi32(delay, pos_in_int);
+						const __m512i delay_shift = _mm512_add_epi32(delay_epi32, pos_in_int);
 						return _mm512_and_epi32(_mm512_srlv_epi32(sensor_int, delay_shift), _mm512_set1_epi32(1));
 					}
 
@@ -805,17 +817,18 @@ namespace htm
 					L3 Cache Latency = 42 cycles (i7 - 6700 Skylake 4.0 GHz)
 					RAM Latency = 42 cycles + 51 ns (i7 - 6700 Skylake)
 					*/
+					template <typename P>
 					std::tuple<int, int> count_active_potential_DD_synapses_avx512(
-						const Column& column,
+						const Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						auto permanence_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_permanence[segment_i].data());
-						auto delay_origin_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_delay_origin[segment_i].data());
+						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_permanence[segment_i].data());
+						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.dd_synapse_delay_origin[segment_i].data());
 						auto active_cells_ptr = active_cells.data();
 						
-						const __m512i connected_threshold_simd = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
 						const __m512i active_threshold_simd = _mm512_set1_epi8(param.TP_DD_ACTIVE_THRESHOLD);
 
 						__m512i n_potential_synapses = _mm512_setzero_si512();
@@ -826,19 +839,19 @@ namespace htm
 
 						for (int block = 0; block < n_blocks; ++block)
 						{
-							const __m512i permanence = permanence_ptr[block]; //load 64 permanence values
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence, connected_threshold_simd, _MM_CMPINT_NLE);
-							const __mmask64 active_mask_64 = _mm512_cmp_epi8_mask(permanence, active_threshold_simd, _MM_CMPINT_NLE);
+							const __m512i permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
+							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8, connected_threshold_epi8, _MM_CMPINT_NLE);
+							const __mmask64 active_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8, active_threshold_simd, _MM_CMPINT_NLE);
 							{
 								for (int i = 0; i < 4; ++i)
 								{
 									const __mmask16 connected_mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
 									if (connected_mask_16 != 0)
 									{
-										const __m512i sensors = get_sensors_epi32(connected_mask_16, delay_origin_ptr[(block * 4) + i], active_cells_ptr);
-										n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors);
+										const __m512i sensors_epi32 = get_sensors_epi32(connected_mask_16, delay_origin_epi32_ptr[(block * 4) + i], active_cells_ptr);
+										n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
 										const __mmask16 active_mask_16 = static_cast<__mmask16>(active_mask_64 >> (i * 16));
-										n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors);
+										n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
 									}
 								}
 							}
@@ -866,10 +879,11 @@ namespace htm
 						return std::make_tuple(n_active_synapses_int, n_potential_synapses_int);
 					}
 
+					template <typename P>
 					std::tuple<int, int> count_active_potential_DD_synapses_hist_ref(
-						const Column& column,
+						const Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						const auto& dd_synapse_permanence_segment = column.dd_synapse_permanence[segment_i];
@@ -898,10 +912,11 @@ namespace htm
 					}
 
 					// Get the number of active and connected synapses of the provided segment in the provided column
+					template <typename P>
 					std::tuple<int, int> d(
-						const Column& column,
+						const Column<P>& column,
 						const int segment_i,
-						const Layer::Active_Cells& active_cells,
+						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						#if _DEBUG
@@ -935,23 +950,22 @@ namespace htm
 						}
 						#endif
 
-						if (ARCH == arch_t::X64) return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
-						if (ARCH == arch_t::AVX512) return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
+						if (P::ARCH == arch_t::X64) return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
+						if (P::ARCH == arch_t::AVX512) return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
 					}
 				}
 			
-				template <bool LEARN>
+				template <bool LEARN, typename P>
 				void d(
-					Layer& layer,
+					Layer<P>& layer,
 					const int time,
 					//in
-					const Layer::Active_Cells& active_cells,
+					const Layer<P>::Active_Cells& active_cells,
 					const Dynamic_Param& param)
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						Column& column = layer[column_i];
-
+						auto& column = layer[column_i];
 						auto& active_segments_current = column.active_dd_segments.current();
 						auto& matching_segments_current = column.matching_dd_segments.current();
 
@@ -979,16 +993,16 @@ namespace htm
 			}
 		}
 		
-		template <bool LEARN>
+		template <bool LEARN, typename P>
 		void compute_tp(
-			Layer& layer,
+			Layer<P>& layer,
 			const int time,
 			const Dynamic_Param& param,
 			//in
 			const Bitset<P::N_COLUMNS>& active_columns,
 			// inout
-			Layer::Active_Cells& active_cells,
-			Layer::Winner_Cells& winner_cells)
+			Layer<P>::Active_Cells& active_cells,
+			Layer<P>::Winner_Cells& winner_cells)
 		{
 			#if _DEBUG
 			if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
