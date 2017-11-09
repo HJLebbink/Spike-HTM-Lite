@@ -49,7 +49,7 @@ namespace htm
 				void active_columns_ref1(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Bitset<P::N_COLUMNS>& active_columns)
+					Layer<P>::Active_Columns& active_columns)
 				{
 					for (int column_i1 = 0; column_i1 < P::N_COLUMNS; ++column_i1)
 					{
@@ -60,7 +60,7 @@ namespace htm
 						{
 							sum += (boosted_overlap[column_i2] > oa);
 						}
-						active_columns[column_i1] = sum < inhibition_top;
+						active_columns.set(column_i1, sum < inhibition_top);
 					}
 				}
 
@@ -69,7 +69,7 @@ namespace htm
 				void active_columns_ref2(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Bitset<P::N_COLUMNS>& active_columns)
+					Layer<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 
@@ -80,18 +80,18 @@ namespace htm
 
 						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							if ((boosted_overlap[column_i] > f) && !active_columns[column_i])
+							if ((boosted_overlap[column_i] > f) && !active_columns.get(column_i))
 							{
 								f = boosted_overlap[column_i];
 								best_i = column_i;
 							}
 						}
-						if (best_i != -1) active_columns[best_i] = true;
+						if (best_i != -1) active_columns.set(best_i);
 					}
 					#if _DEBUG
-					Bitset<P::N_COLUMNS> active_columns2;
+					Layer<P>::Active_Columns active_columns2;
 					active_columns_ref1(boosted_overlap, inhibition_top, active_columns2);
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2[column_i] != active_columns[column_i])
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 					{
 						log_INFO("SP:active_columns_ref2: active_columns=");
 						print::print_bitset(active_columns);
@@ -107,7 +107,7 @@ namespace htm
 				void active_columns_ref3(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Bitset<P::N_COLUMNS>& active_columns)
+					Layer<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 					std::vector<float> tmp = std::vector<float>(boosted_overlap);
@@ -127,15 +127,15 @@ namespace htm
 						}
 						if (best_i != -1)
 						{
-							active_columns[best_i] = true;
+							active_columns.set(best_i);
 							tmp[best_i] = -1;
 						}
 					}
 
 					#if _DEBUG
-					Bitset<P::N_COLUMNS> active_columns2;
+					Layer<P>::Active_Columns active_columns2;
 					active_columns_ref1(boosted_overlap, inhibition_top, active_columns2);
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2[column_i] != active_columns[column_i])
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 					{
 						log_INFO("SP:active_columns_ref3: active_columns=");
 						print::print_bitset(active_columns);
@@ -151,9 +151,9 @@ namespace htm
 				void active_columns_ref4(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Bitset<P::N_COLUMNS>& active_columns)
+					Layer<P>::Active_Columns& active_columns)
 				{
-					active_columns.reset();
+					active_columns.clear_all();
 					std::vector<float> boosted_overlap_copy = std::vector<float>(boosted_overlap);
 
 					std::nth_element(boosted_overlap_copy.begin(), boosted_overlap_copy.begin() + inhibition_top, boosted_overlap_copy.end(), std::greater<float>());
@@ -161,15 +161,15 @@ namespace htm
 
 					for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						if (boosted_overlap[column_i] > nth) active_columns[column_i] = true;
+						if (boosted_overlap[column_i] > nth) active_columns.set(column_i, true);
 					}
 
 					#if _DEBUG
 					if (false) // it seems ref1 does not always yield the same results as ref4
 					{
-						Bitset<P::N_COLUMNS> active_columns2;
-						active_columns_ref1(boosted_overlap, inhibition_top, active_columns2);
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2[column_i] != active_columns[column_i])
+						Layer<P>::Active_Columns active_columns2;
+						active_columns_ref1<P>(boosted_overlap, inhibition_top, active_columns2);
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 						{
 							log_INFO("SP:active_columns_ref4: active_columns=");
 							print::print_bitset(active_columns);
@@ -185,7 +185,7 @@ namespace htm
 				void d(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const Dynamic_Param& param,
-					Bitset<P::N_COLUMNS>& active_columns)
+					Layer<P>::Active_Columns& active_columns)
 				{
 					const int inhibition_top = static_cast<int>(P::N_COLUMNS * param.SP_LOCAL_AREA_DENSITY);
 
@@ -218,7 +218,7 @@ namespace htm
 				void calc_overlap_ref(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
@@ -232,7 +232,7 @@ namespace htm
 							if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
 							{
 								const auto origin_sensor = column.pd_synapse_origin[synapse_i];
-								overlap += sensor_activity.get(origin_sensor); // deadly gather here!
+								overlap += active_sensors.get(origin_sensor); // deadly gather here!
 							}
 						}
 						if (false) log_INFO_DEBUG("SP:calc_overlap_ref: column ", column.id, " has overlap = ", overlap, ".\n");
@@ -245,13 +245,13 @@ namespace htm
 				void calc_overlap_scatter(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
-					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+					for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 					{
-						if (sensor_activity.get(sensor_i))
+						if (active_sensors.get(sensor_i))
 						{
 							const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
 							const auto& permanences = layer.sp_pd_synapse_permanence[sensor_i];
@@ -308,12 +308,12 @@ namespace htm
 				void calc_overlap_avx512(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out 
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
 					const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
-					auto active_sensors_ptr = sensor_activity.data();
+					auto active_sensors_ptr = active_sensors.data();
 					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
@@ -340,7 +340,7 @@ namespace htm
 					}
 					#if _DEBUG
 					std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-					priv::calc_overlap::calc_overlap_ref(layer, param, sensor_activity, overlaps_ref);
+					priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
 						const int overlap_ref = overlaps_ref[column_i];
@@ -355,7 +355,7 @@ namespace htm
 				void calc_overlap_avx512_small_epi32(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out 
 					std::vector<int>& overlaps)
 				{
@@ -365,9 +365,9 @@ namespace htm
 					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 					std::array<int, 16> t = { 0 };
-					for (int i = 0; i < sensor_activity.N_BLOCKS; ++i)
+					for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
 					{
-						t[i] = sensor_activity._data[i];
+						t[i] = active_sensors._data[i];
 					}
 					const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
 
@@ -411,19 +411,19 @@ namespace htm
 				void calc_overlap_avx512_small_epi16(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out 
 					std::vector<int>& overlaps)
 				{
-					assert_msg(P::N_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
+					assert_msg(P::N_VISIBLE_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
 					const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
 					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 					std::array<int, 16> t = { 0 };
-					for (int i = 0; i < sensor_activity.N_BLOCKS; ++i)
+					for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
 					{
-						t[i] = sensor_activity._data[i];
+						t[i] = active_sensors._data[i];
 					}
 					const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
 
@@ -465,7 +465,7 @@ namespace htm
 
 					#if _DEBUG
 					std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-					priv::calc_overlap::calc_overlap_ref(layer, param, sensor_activity, overlaps_ref);
+					priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
 						const int overlap_ref = overlaps_ref[column_i];
@@ -479,26 +479,26 @@ namespace htm
 				void d(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+					const Layer<P>::Active_Sensors& active_sensors,
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
 					if (SP_GATHER)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_ref(layer, param, sensor_activity, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_ref(layer, param, active_sensors, overlaps);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512)
-							if (P::N_SENSORS < 512)
+							if (P::N_VISIBLE_SENSORS < 512)
 							{
-								calc_overlap_avx512_small_epi16(layer, param, sensor_activity, overlaps);
+								calc_overlap_avx512_small_epi16(layer, param, active_sensors, overlaps);
 								//calc_overlap_avx512_small_epi32(layer, param, sensor_activity, overlaps);
 							}
 							else
-								calc_overlap_avx512(layer, param, sensor_activity, overlaps);
+								calc_overlap_avx512(layer, param, active_sensors, overlaps);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_scatter(layer, param, active_sensors, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) calc_overlap_scatter(layer, param, active_sensors, overlaps);
 					}
 				}
 			}
@@ -522,12 +522,12 @@ namespace htm
 				void update_synapses_ref(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset<P::N_COLUMNS>& active_columns,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity)
+					const Layer<P>::Active_Columns& active_columns,
+					const Layer<P>::Active_Sensors& active_sensors)
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						if (active_columns[column_i])
+						if (active_columns.get(column_i))
 						{
 							auto& column = layer[column_i];
 
@@ -535,7 +535,7 @@ namespace htm
 							{
 								const auto sensor_i = column.pd_synapse_origin[synapse_i];
 								const int old_permanence = column.pd_synapse_permanence[synapse_i];
-								const int increment = (sensor_activity.get(sensor_i)) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC;
+								const int increment = (active_sensors.get(sensor_i)) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC;
 								const int new_permanence = std::min(127, std::max(-128, old_permanence + increment));
 
 								if (false) log_INFO_DEBUG("SP:update_synapses: inc: column ", column_i, "; synpase ", synapse_i, ": old permanence ", old_permanence, "; new permanence = ", new_permanence, ".");
@@ -549,12 +549,12 @@ namespace htm
 				void update_synapses_scatter(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset<P::N_COLUMNS>& active_columns,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity)
+					const Layer<P>::Active_Columns& active_columns,
+					const Layer<P>::Active_Sensors& active_sensors)
 				{
 					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 					{
-						const int increment = (sensor_activity.get(sensor_i)) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC;
+						const int increment = (active_sensors.get(sensor_i)) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC;
 
 						auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
 						const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
@@ -578,18 +578,18 @@ namespace htm
 				void d(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Bitset<P::N_COLUMNS>& active_columns,
-					const Bitset_Compact<P::N_SENSORS>& sensor_activity)
+					const Layer<P>::Active_Columns& active_columns,
+					const Layer<P>::Active_Sensors& active_sensors)
 				{
 					if (SP_GATHER)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, sensor_activity);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, active_sensors);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_scatter(layer, param, active_columns, sensor_activity);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_scatter(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_scatter(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_scatter(layer, param, active_columns, active_sensors);
 					}
 				}
 			}
@@ -731,24 +731,20 @@ namespace htm
 
 		template <bool LEARN, typename P>
 		void compute_sp(
-			const Bitset_Compact<P::N_SENSORS>& sensor_activity,
+			const Layer<P>::Active_Sensors& active_sensors,
 			Layer<P>& layer,
 			const Dynamic_Param& param,
 			//out
-			Bitset<P::N_COLUMNS>& active_columns)
+			Layer<P>::Active_Columns& active_columns)
 		{
 			//local variables
 			auto overlap_local = std::vector<int>(P::N_COLUMNS);
 			auto boosted_overlap_local = std::vector<float>(P::N_COLUMNS);
 
-			#if _DEBUG
-			if (false) log_INFO("SP:compute_sp: sensor activity IN:", print::print_sensor_activity(sensor_activity, P::N_SENSORS_DIM1));
-			#endif
-
 			layer.iteration_num++;
 			if (LEARN) layer.iteration_learn_num++;
 
-			priv::calc_overlap::d(layer, param, sensor_activity, overlap_local);
+			priv::calc_overlap::d(layer, param, active_sensors, overlap_local);
 
 			// update the boost factors
 			//#pragma ivdep // ignore write after write dependency in rand_float
@@ -771,14 +767,14 @@ namespace htm
 
 			if (LEARN)
 			{
-				priv::update_synapses::d(layer, param, active_columns, sensor_activity);
+				priv::update_synapses::d(layer, param, active_columns, active_sensors);
 
 				if (true)
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
 						auto& column = layer[column_i];
-						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns[column_i]);
+						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns.get(column_i));
 						priv::update_boost_factors(layer, column, param, layer.active_duty_cycles[column_i]);
 
 						if (false)

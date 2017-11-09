@@ -35,10 +35,11 @@ namespace htm
 		using namespace htm::types;
 
 		template <typename P>
-		std::vector<Bitset_Compact<P::N_SENSORS>> encode_pass_through(
-			const std::string& filename)
+		std::vector<Layer<P>::Active_Sensors> encode_pass_through(
+			const std::string& filename,
+			const Dynamic_Param& param)
 		{
-			auto data = std::vector<Bitset_Compact<P::N_SENSORS>>();
+			auto data = std::vector<Layer<P>::Active_Sensors>();
 
 			std::ifstream input(filename);
 			if (!input.good())
@@ -53,15 +54,15 @@ namespace htm
 			bool endFile = false;
 			while (!endFile)
 			{
-				Bitset_Compact<P::N_SENSORS> item;
+				Layer<P>::Active_Sensors item;
 				auto pos = 0;
 
-				for (auto i1 = 0; i1 < P::N_SENSORS_DIM1; ++i1)
+				for (auto i1 = 0; i1 < param.n_visible_sensors_dim1; ++i1)
 				{
 					std::getline(input, str);
 					if (input.bad())
 					{
-						log_ERROR("encoder::encode_pass_through: i1 = ", i1, "; D2 = ", P::N_SENSORS_DIM2, "; line ", line, ".\n");
+						log_ERROR("encoder::encode_pass_through: i1 = ", i1, "; D2 = ", param.n_visible_sensors_dim2, "; line ", line, ".\n");
 					}
 					else if (input.eof())
 					{
@@ -77,17 +78,17 @@ namespace htm
 						}
 						else
 						{
-							if (false) log_INFO("encoder::encode_pass_through: i1 = ", i1, "; D2 = ", P::N_SENSORS_DIM2, "; line ", line, "; content = ", str, ".\n");
+							if (false) log_INFO("encoder::encode_pass_through: i1 = ", i1, "; D2 = ", param.n_visible_sensors_dim2, "; line ", line, "; content = ", str, ".\n");
 							line++;
 
-							if (str.length() < P::N_SENSORS_DIM1) log_WARNING("encoder:encode_pass_through: str ", str, " is smaller than D1 = ", P::N_SENSORS_DIM1, ".\n");
+							if (str.length() < param.n_visible_sensors_dim1) log_WARNING("encoder:encode_pass_through: str ", str, " is smaller than D1 = ", param.n_visible_sensors_dim1, ".\n");
 
-							for (auto i2 = 0; i2 < std::min(static_cast<int>(str.length()), P::N_SENSORS_DIM1); ++i2)
+							for (auto i2 = 0; i2 < std::min(static_cast<int>(str.length()), param.n_visible_sensors_dim1); ++i2)
 							{
 								switch (str[i2])
 								{
-									case '0': item.clear(pos); pos++; break;
-									case '1': item.set(pos); pos++; break;
+									case '0': item.set(pos, false); pos++; break;
+									case '1': item.set(pos, true); pos++; break;
 									default:
 										log_WARNING("encoder:encode_pass_through: found ", str[i2], ".\n");
 										break;
@@ -107,10 +108,10 @@ namespace htm
 		}
 
 		template <typename P>
-		void get_sensor_activity(
+		void get_active_sensors(
 			const int t,
-			const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
-			Bitset_Compact<P::N_SENSORS>& sensor_activity)
+			const std::vector<Layer<P>::Active_Sensors>& data,
+			Layer<P>::Active_Sensors& sensor_activity)
 		{
 			const int time_step_max = static_cast<int>(data.size());
 			const auto i = t % time_step_max;

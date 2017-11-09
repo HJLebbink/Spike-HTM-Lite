@@ -31,6 +31,9 @@
     <None Include="layer.ipp">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="network.ipp">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="types.ipp">

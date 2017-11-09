@@ -114,6 +114,7 @@
     <None Include="constants.ipp" />
     <None Include="encoder.ipp" />
     <None Include="layer.ipp" />
+    <None Include="network.ipp" />
     <None Include="print.ipp" />
     <None Include="sp.ipp" />
     <None Include="swarm.ipp" />

@@ -1,4 +1,4 @@
-// C++ port of Nupic HTM with the aim of being lite and fast
+// C++port of Nupic HTM with the aim of being lite and fast
 //
 // Copyright (c) 2017 Henk-Jan Lebbink
 //
@@ -25,44 +25,108 @@
 #include "../HTM-Lite-LIB/types.ipp"
 #include "../HTM-Lite-LIB/layer.ipp"
 #include "../HTM-Lite-LIB/swarm.ipp"
+#include "../HTM-Lite-LIB/network.ipp"
 
 using namespace htm;
 using namespace htm::types;
 
-inline void test_run()
+inline void test_layer()
 {
 	// static properties: properties that need to be known at compile time:
 
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 100 * 8;
-	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
-	const int N_BITS_CELL_LOCAL = 4;
-	const int SENSOR_DIM1_LOCAL = 20;
-	const int SENSOR_DIM2_LOCAL = 20;
+	const int N_BLOCKS = 4 * 8;
+	const int N_COLUMNS = 64 * N_BLOCKS;
+	const int N_BITS_CELL = 4;
+	const int N_SENSOR_DIM1 = 20;
+	const int N_SENSOR_DIM2 = 20;
+	const int N_HIDDEN_VISIBLE_SENSORS = 0;
 	const arch_t ARCH = arch_t::RUNTIME;
 	const int HISTORY_SIZE = 8;
+	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param;
-	param.n_time_steps = 2000;
-	param.n_times = 1;
-	param.progress = false;
+	param.learn = true;
+	param.n_time_steps = 300;
+	param.n_times = 10;
+	param.n_visible_sensors_dim1 = N_SENSOR_DIM1;
+	param.n_visible_sensors_dim2 = N_SENSOR_DIM2;
+
+	param.progress = true;
+	param.progress_display_interval = 20;
+
 	param.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
 	param.MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
-
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
 
-	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_VISIBLE_SENSORS, HISTORY_SIZE, ARCH>;
 	Layer<P> layer;
-	auto data = encoder::encode_pass_through<P>(input_filename);
+	auto data = encoder::encode_pass_through<P>(input_filename, param);
 
-	const bool LEARN = true;
-	htm::layer::run<LEARN>(data, layer, param);
+	htm::layer::run_multiple_times(data, layer, param);
+}
+
+inline void test_network()
+{
+	// static properties: properties that need to be known at compile time:
+
+	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	const int N_BLOCKS_L1 = 1 * 8;
+	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	const int N_BITS_CELL_L1 = 4;
+	const int N_SENSORS_DIM1 = 20;
+	const int N_SENSORS_DIM2 = 20;
+	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	const int N_HIDDEN_VISIBLE_SENSORS_L1 = 0;
+	const int HISTORY_L1 = 2;
+
+	const int N_BLOCKS_L2 = 1 * 8;
+	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	const int N_BITS_CELL_L2 = 4;
+	const int HISTORY_L2 = 2;
+
+	const arch_t ARCH = arch_t::RUNTIME;
+
+	// dynamic properties: properties that can be changed while the program is running.
+	Dynamic_Param param1;
+	param1.learn = true;
+	param1.n_time_steps = 10;
+	param1.n_times = 1;
+	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
+	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
+
+	param1.progress = true;
+	param1.progress_display_interval = 20;
+
+	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
+	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
+
+	Dynamic_Param param2(param1);
+
+	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+
+	using Network_Config = network::network_2Layer<
+		N_COLUMNS_L1, N_BITS_CELL_L1, N_VISIBLE_SENSORS_L1, HISTORY_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2, ARCH>;
+
+	using P1 = Network_Config::P_L1;
+	using P2 = Network_Config::P_L2;
+
+	Layer<P1> layer1;
+	Layer<P2> layer2;
+
+	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+
+	htm::network::run(data, layer1, layer2, param1, param2);
 }
 
 inline void test_swarm()
@@ -73,16 +137,20 @@ inline void test_swarm()
 	//const int N_BLOCKS = 4096; // 262144 columns
 	//const int N_BLOCKS = 16384; // 1048576 columns
 	const int N_BLOCKS = 10 * 8;
-	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
-	const int N_BITS_CELL_LOCAL = 4;
-	const int SENSOR_DIM1_LOCAL = 20;
-	const int SENSOR_DIM2_LOCAL = 20;
+	const int N_COLUMNS = 64 * N_BLOCKS;
+	const int N_BITS_CELL = 4;
+	const int N_SENSOR_DIM1 = 20;
+	const int N_SENSOR_DIM2 = 20;
+	const int N_HIDDEN_VISIBLE_SENSORS = 0;
 	const arch_t ARCH = arch_t::RUNTIME;
 	const int HISTORY_SIZE = 8;
+	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 
 	Dynamic_Param param;
+	param.learn = true;
 	param.n_time_steps = 1000;
 	param.n_times = 1;
+	param.progress = false;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
@@ -103,14 +171,15 @@ inline void test_swarm()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
-	htm::swarm::run_ga<P>(input_filename, param, options);
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_VISIBLE_SENSORS, HISTORY_SIZE, ARCH>;
+	htm::swarm::run_ga<P, N_SENSOR_DIM1, N_SENSOR_DIM2>(input_filename, param, options);
 }
 
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	test_run();
+	//test_layer();
+	test_network();
 	//test_swarm();
 	const auto end_time = std::chrono::system_clock::now();
 

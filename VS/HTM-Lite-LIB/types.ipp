@@ -186,16 +186,19 @@ namespace htm
 				return this->_data & (1 << i);
 			}
 			// set all
-			void set()
+			void set_all()
 			{
 				this->_data = MASK;
 			}
-			void set(const int i)
+			void set(const int i, const bool value)
 			{
 				::tools::assert::assert_msg(((i >= 0) && (i < SIZE)), "types:BitsetSparse:set invalid i ", i);
-				this->_data |= (1 << i);
+				if (value)
+					this->_data |= (1 << i);
+				else
+					this->_data &= ~(1 << i);
 			}
-			void reset()
+			void clear_all()
 			{
 				this->_data = 0;
 			}
@@ -228,17 +231,13 @@ namespace htm
 			{
 				this->_data = std::vector<char>(SIZE);
 			}
-			char& operator[] (int i)
-			{
-				return this->_data[i];
-			}
-			const char& operator[] (int i) const
-			{
-				return this->_data[i];
-			}
 			bool get(int i) const
 			{
 				return this->_data[i];
+			}
+			void set(int i)
+			{
+				this->_data[i] = true;
 			}
 			char * data()
 			{
@@ -306,31 +305,21 @@ namespace htm
 			{
 				this->_data = std::vector<int>(N_BLOCKS, 0);
 			}
-			int& operator[] (int i)
-			{
-				return this->_data[i];
-			}
-			const int& operator[] (int i) const
-			{
-				return this->_data[i];
-			}
 			bool get(int i) const
 			{
 				const int pos_in_array = i >> 5;
 				const int pos_in_word = i & 0b11111;
 				return (this->_data[pos_in_array] & (1 << pos_in_word)) != 0;
 			}
-			void set(int i)
+			void set(const int i, const bool value)
 			{
 				const int pos_in_array = i >> 5;
 				const int pos_in_word = i & 0b11111;
-				this->_data[pos_in_array] |= (1 << pos_in_word);
-			}
-			void clear(int i)
-			{
-				const int pos_in_array = i >> 5;
-				const int pos_in_word = i & 0b11111;
-				this->_data[pos_in_array] &= ~(1 << pos_in_word);
+
+				if (value)
+					this->_data[pos_in_array] |= (1 << pos_in_word);
+				else
+					this->_data[pos_in_array] &= ~(1 << pos_in_word);
 			}
 			void negate(int i)
 			{
@@ -338,7 +327,6 @@ namespace htm
 				const int pos_in_word = i & 0b11111;
 				this->_data[pos_in_array] ^= (1 << pos_in_word);
 			}
-
 			int * data()
 			{
 				return this->_data.data();
@@ -347,7 +335,7 @@ namespace htm
 			{
 				return this->_data.data();
 			}
-			void reset()
+			void clear_all()
 			{
 				std::fill(this->_data.begin(), this->_data.end(), 0);
 			}
@@ -661,14 +649,10 @@ namespace htm
 		template <typename P>
 		struct Layer
 		{
-			std::vector<Column<P>> data;
-
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
-
-			Active_Cells active_cells; //32MB for 1M columns times History
-
 			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
-			Winner_Cells winner_cells;
+			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
+			using Active_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
 
 			// default constructor
 			Layer()
@@ -676,56 +660,10 @@ namespace htm
 				this->data.resize(P::N_COLUMNS);
 			}
 
-			void init(const Dynamic_Param& param)
-			{
-				if (!SP_GATHER)
-				{
-					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
-					{
-						this->sp_pd_destination_column[sensor_i].clear();
-						this->sp_pd_synapse_permanence[sensor_i].clear();
-					}
-				}
+			std::vector<Column<P>> data;
 
-				//init permanence values
-				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-				{
-					auto& column = this->data[column_i];
-					column.id = column_i;
-
-					// reset pd synapses
-					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-					{
-						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, column.random_number);
-						if (SP_GATHER)
-						{
-							column.pd_synapse_permanence[synapse_i] = param.SP_PD_PERMANENCE_INIT;
-							column.pd_synapse_origin[synapse_i] = random_sensor;
-						}
-						else
-						{
-							this->sp_pd_destination_column[random_sensor].push_back(column_i);
-							this->sp_pd_synapse_permanence[random_sensor].push_back(param.SP_PD_PERMANENCE_INIT);
-						}
-						if (false) log_INFO("Layer::init: column ", column_i, "; synapse ", synapse_i, "; pd_synapse_origin ", random_sensor, "; current_random_number ", static_cast<int>(random::priv::current_random_number));
-					}
-
-					// reset dd synapses
-					column.dd_segment_count = 0;
-					column.dd_synapse_count.clear();
-					column.dd_synapse_permanence.clear();
-					column.dd_synapse_delay_origin.clear();
-					column.dd_synapse_active_time.clear();
-
-					// reset activity
-					column.active_dd_segments.reset();
-					column.matching_dd_segments.reset();
-				}
-
-				// reset global state
-				this->active_cells.reset();
-				this->winner_cells.reset();
-			}
+			Active_Cells active_cells; //32MB for 1M columns times History
+			Winner_Cells winner_cells;
 
 			#pragma region Used by SP only
 			//Number of iterations.
@@ -742,13 +680,17 @@ namespace htm
 			std::vector<float> min_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
 
 			//scatter tests:
-			mutable std::vector<std::vector<int>> sp_pd_destination_column = std::vector<std::vector<int>>(P::N_SENSORS);
-			mutable std::vector<std::vector<Permanence>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence>>(P::N_SENSORS);
+			mutable std::vector<std::vector<int>> sp_pd_destination_column = std::vector<std::vector<int>>(P::N_VISIBLE_SENSORS);
+			mutable std::vector<std::vector<Permanence>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence>>(P::N_VISIBLE_SENSORS);
 
 			mutable std::vector<std::vector<int>> sp_pd_origin_sensor = std::vector<std::vector<int>>(P::N_COLUMNS);
-
-
 			#pragma endregion
+
+
+			#pragma region Used by TP only
+			Active_Sensors active_sensors;
+			Active_Columns active_columns;
+			#pragma endregion 
 
 			Column<P>& operator[] (int i)
 			{
@@ -765,7 +707,7 @@ namespace htm
 		template <int SIZE1, int SIZE2>
 		void copy(Bitset_Compact<SIZE1 * SIZE2>& out, const Bitset2<SIZE1, SIZE2>& in)
 		{
-			out.reset();
+			out.clear_all();
 			auto counter = 0;
 
 			//TODO: this can be done by just copying in to the correct position in out

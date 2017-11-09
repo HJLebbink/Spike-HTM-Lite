@@ -271,7 +271,7 @@ namespace htm
 
 			template <typename P>
 			void do_work(
-				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
+				const std::vector<Layer<P>::Active_Sensors>& data,
 				Layer<P>& layer,
 				Swarm_Options& options,
 				Configuration& result)
@@ -281,7 +281,10 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 					result.param.progress = false;
 					result.param.quiet = true;
-					const int total_mismatch = htm::layer::run<true, P>(data, layer, result.param);
+
+					htm::layer::init(layer, result.param);
+					const int total_mismatch = htm::layer::run(data, layer, result.param);
+
 					if (result.mismatch != Configuration::MISMATCH_INVALID)
 					{
 						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
@@ -294,7 +297,7 @@ namespace htm
 
 			template <typename P>
 			void do_work_all(
-				const std::vector<Bitset_Compact<P::N_SENSORS>>& data,
+				const std::vector<Layer<P>::Active_Sensors>& data,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration>& results)
@@ -302,8 +305,8 @@ namespace htm
 				Layer<P> layer;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work<P>(data, layer, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work<P>(data, layer, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(data, layer, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(data, layer, options, results[i]);
 			}
 		}
 
@@ -330,7 +333,7 @@ namespace htm
 				results.push_back(Configuration(param_local));
 			}
 
-			const auto data = encoder::encode_pass_through<P>(input_filename);
+			const auto data = encoder::encode_pass_through<P>(input_filename, param);
 
 			std::vector<std::thread> workers;
 			for (int thread = 0; thread < nThreads; ++thread)
@@ -341,7 +344,7 @@ namespace htm
 			return results;
 		}
 
-		template <typename P>
+		template <typename P, int N_SENSOR_DIM1, int N_SENSOR_DIM2>
 		std::vector<Configuration> run_ga(
 			const std::string& input_filename,
 			const Dynamic_Param& param,
@@ -357,7 +360,7 @@ namespace htm
 			std::default_random_engine random_engine(r());
 			std::uniform_int_distribution<int> individual_dist(0, options.population_size-1);
 
-			const auto data = encoder::encode_pass_through<P>(input_filename);
+			const auto data = encoder::encode_pass_through<P>(input_filename, param);
 
 			std::vector<Configuration> pool = run_random<P>(input_filename, param, options);
 			std::vector<Configuration> results;

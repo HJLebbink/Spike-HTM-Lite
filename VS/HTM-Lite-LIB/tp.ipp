@@ -575,7 +575,7 @@ namespace htm
 
 					const auto& prev_matching_segments = column.matching_dd_segments.prev();
 
-					current_active_cells.set(); //burst!
+					current_active_cells.set_all(); //burst!
 
 					// find the best matching segment
 					const auto tup = prev_matching_segments.highest_activity();
@@ -586,8 +586,8 @@ namespace htm
 						? column.dd_segment_destination[best_matching_segment]
 						: get_least_used_cell(column);
 
-					current_winner_cells.reset();
-					current_winner_cells.set(winner_cell);
+					current_winner_cells.clear_all();
+					current_winner_cells.set(winner_cell, true);
 
 					if (LEARN)
 					{
@@ -620,8 +620,8 @@ namespace htm
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
 				{
-					current_active_cells.reset();
-					current_winner_cells.reset();
+					current_active_cells.clear_all();
+					current_winner_cells.clear_all();
 
 					const auto& prev_active_segments = column.active_dd_segments.prev();
 
@@ -629,8 +629,8 @@ namespace htm
 					{
 						const int segment_i = prev_active_segments.get_id(i);
 						const auto cell = column.dd_segment_destination[segment_i];
-						current_active_cells.set(cell);
-						current_winner_cells.set(cell);
+						current_active_cells.set(cell, true);
+						current_winner_cells.set(cell, true);
 
 						if (LEARN)
 						{
@@ -706,8 +706,8 @@ namespace htm
 					}
 					else
 					{
-						current_active_cells.reset();
-						current_winner_cells.reset();
+						current_active_cells.clear_all();
+						current_winner_cells.clear_all();
 						if (LEARN) punish_predicted_column(
 							column,
 							param,
@@ -721,7 +721,7 @@ namespace htm
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const Bitset<P::N_COLUMNS>& active_columns,
+					const Layer<P>::Active_Columns& active_columns,
 					//inout
 					Layer<P>::Active_Cells& active_cells,
 					Layer<P>::Winner_Cells& winner_cells)
@@ -740,7 +740,7 @@ namespace htm
 							time,
 							param,
 							//in
-							active_columns[column_i],
+							active_columns.get(column_i),
 							active_cells,
 							winner_cells,
 							//out
@@ -950,8 +950,12 @@ namespace htm
 						}
 						#endif
 
-						if (architecture_switch(P::ARCH) == arch_t::X64) return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
+						switch (architecture_switch(P::ARCH))
+						{
+							case arch_t::X64: return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
+							case arch_t::AVX512: return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
+							default: return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
+						}
 					}
 				}
 			
@@ -999,13 +1003,13 @@ namespace htm
 			const int time,
 			const Dynamic_Param& param,
 			//in
-			const Bitset<P::N_COLUMNS>& active_columns,
+			const Layer<P>::Active_Columns& active_columns,
 			// inout
 			Layer<P>::Active_Cells& active_cells,
 			Layer<P>::Winner_Cells& winner_cells)
 		{
 			#if _DEBUG
-			if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
+			//if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
 			//if (false) log_INFO("TP:compute_tp: prev_active_cells: ", print::print_active_cells(active_cells.prev()));
 			#endif
 
@@ -1021,7 +1025,7 @@ namespace htm
 
 			#if _DEBUG
 			//if (false) log_INFO("TP:compute_tp: active_cells current: time = ", time, ":", print::print_active_cells(active_cells.current()));
-			if (false) log_INFO("TP:compute_tp: winner_cells current: time = ", time, ":", print::print_active_cells(winner_cells.current()));
+			//if (false) log_INFO("TP:compute_tp: winner_cells current: time = ", time, ":", print::print_active_cells(winner_cells.current()));
 			#endif
 
 			priv::activate_dendrites::d<LEARN>(

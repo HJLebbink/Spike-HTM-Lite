@@ -32,7 +32,7 @@ namespace htm
 		using namespace htm::types;
 
 		template <int SIZE>
-		void print_bitset(
+		std::string print_bitset(
 			const Bitset_Tiny<SIZE>& bitset)
 		{
 			std::ostringstream result;
@@ -60,6 +60,17 @@ namespace htm
 			std::ostringstream result;
 			result << "(count = " << bitset._data.size() << "):";
 			for (auto i = 0; i < bitset._data.size(); ++i) if (bitset._data[i]) result << " " << i;
+			result << "\n";
+			return result.str();
+		}
+		
+		template <int SIZE>
+		std::string print_bitset(
+			const Bitset_Compact<SIZE>& bitset)
+		{
+			std::ostringstream result;
+			result << "(count = " << bitset.count() << "):";
+			for (auto i = 0; i < SIZE; ++i) if (bitset.get(i)) result << " " << i;
 			result << "\n";
 			return result.str();
 		}
@@ -177,22 +188,22 @@ namespace htm
 			return result.str();
 		}
 
-		template <int N_COLUMNS>
+		template <typename P>
 		std::string print_active_columns(
-			const Bitset<N_COLUMNS>& column_active,
+			const Layer<P>::Active_Columns& active_columns,
 			const int width)
 		{
 			int sum = 0;
 			int counter = 0;
 			std::ostringstream result;
 
-			while (counter < N_COLUMNS)
+			while (counter < P::N_COLUMNS)
 			{
 				for (auto i = 0; i < width; ++i)
 				{
-					if (counter < N_COLUMNS)
+					if (counter < P::N_COLUMNS)
 					{
-						if (column_active[counter])
+						if (active_columns.get(counter))
 						{
 							result << "X";
 							sum++;
@@ -245,8 +256,8 @@ namespace htm
 
 		template <typename P>
 		std::string print_sensor_activity2(
-			const Bitset_Compact<P::N_SENSORS>& sensor_activity1,
-			const Bitset_Compact<P::N_SENSORS>& sensor_activity2,
+			const Layer<P>::Active_Sensors& sensor_activity1,
+			const Layer<P>::Active_Sensors& sensor_activity2,
 			const int width)
 		{
 			std::ostringstream result;

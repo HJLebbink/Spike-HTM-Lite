@@ -35,11 +35,11 @@ namespace htm
 	//========================================================================
 	enum arch_t
 	{
-		// reference implementation, regular c++ code
+		//Reference implementation, regular c++ code
 		X64, 
-		// explicit use of AVX512 instructions (Skylake X)
+		//Explicit use of AVX512 instructions (Skylake X)
 		AVX512, 
-		// determine instruction set a runtime
+		//Determine instruction set a runtime
 		RUNTIME
 	};
 
@@ -60,20 +60,19 @@ namespace htm
 
 	//========================================================================
 	template <
-		int N_COLUMNS_IN = 512,
-		int N_BITS_CELL_IN = 4,
-		int N_SENSORS_DIM1_IN = 20,
-		int N_SENSORS_DIM2_IN = 20,
-		arch_t ARCH_IN = arch_t::X64,
-		int HISTORY_SIZE_IN = 2>
+		int N_COLUMNS_IN,
+		int N_BITS_CELL_IN,
+		int N_VISIBLE_SENSORS_IN,
+		int N_HIDDEN_SENSORS_IN,
+		int HISTORY_SIZE_IN,
+		arch_t ARCH_IN>
 	struct Static_Param
 	{
 		static_assert(N_COLUMNS_IN > 0, "ERROR: Parameters: provided N_COLUMNS is too small; min N_COLUMNS is 64.");
 		static_assert((N_COLUMNS_IN & 0b111111) == 0, "ERROR: Parameters: provided N_COLUMNS is not a multiple of 64.");
 		static_assert(N_BITS_CELL_IN > 0, "ERROR: Parameters: provided N_BITS_CELL is too small; min N_BITS_CELL is 1.");
 		static_assert(N_BITS_CELL_IN < 7, "ERROR: Parameters: provided N_BITS_CELL is too large; max N_BITS_CELL is 6.");
-		static_assert(N_SENSORS_DIM1_IN > 0, "ERROR: Parameters: provided N_SENSORS_DIM1_IN is too small; min N_SENSORS_DIM1_IN is 1.");
-		static_assert(N_SENSORS_DIM2_IN > 0, "ERROR: Parameters: provided N_SENSORS_DIM2_IN is too small; min N_SENSORS_DIM2_IN is 1.");
+		static_assert(N_VISIBLE_SENSORS_IN > 0, "ERROR: Parameters: provided N_VISIBLE_SENSORS_IN is too small; min N_VISIBLE_SENSORS_IN is 1.");
 //		static_assert(HISTORY_SIZE_IN < 2, "ERROR: Parameters: provided HISTORY_SIZE_IN is too small; min HISTORY_SIZE_IN is 2.");
 //		static_assert(HISTORY_SIZE_IN > 8, "ERROR: Parameters: provided HISTORY_SIZE_IN is too large; max HISTORY_SIZE_IN is 8.");
 
@@ -81,9 +80,11 @@ namespace htm
 		//Number of columns in layer: Multiple of 64.
 		static constexpr int N_COLUMNS = N_COLUMNS_IN;
 
-		static constexpr int N_SENSORS_DIM1 = N_SENSORS_DIM1_IN;
-		static constexpr int N_SENSORS_DIM2 = N_SENSORS_DIM1_IN;
-		static constexpr int N_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+		static constexpr int N_VISIBLE_SENSORS = N_VISIBLE_SENSORS_IN;
+
+		static constexpr int N_HIDDEN_SENSORS = N_HIDDEN_SENSORS_IN;
+
+		static constexpr int N_SENSORS = N_VISIBLE_SENSORS + N_HIDDEN_SENSORS;
 
 		// History of 2 means that current and prev 
 		static constexpr int HISTORY_SIZE = HISTORY_SIZE_IN;
@@ -139,6 +140,10 @@ namespace htm
 		//efficient use of columns. However, too much boosting may also lead to
 		//instability of SP outputs.
 		static constexpr float SP_BOOST_STRENGTH = 0.25;
+
+		//Percentage of noise added to sensors; use zero for no noise.
+		static constexpr int SENSOR_NOISE_PERCENT = 0;
+
 		#pragma endregion
 		//========================================================================
 		#pragma region Temporal Pooler constants
@@ -176,10 +181,28 @@ namespace htm
 
 	struct Dynamic_Param
 	{
+		//Whether learning is switched on or off
+		bool learn = true;
+
+		//Number of (time) steps the layer will be updated (run)
 		int n_time_steps = 100;
-		bool progress = false;
+
+		//How often the complete learning run will be repeated
 		int n_times = 1;
+
+		//Whehter progress will be shown
+		bool progress = false;
+
+		//How often progress will be shown
+		int progress_display_interval = 10;
+
+		//Whether stuff will be written to stdout
 		bool quiet = false;
+
+
+
+		int n_visible_sensors_dim1 = 20;
+		int n_visible_sensors_dim2 = 20;
 
 		//If the permanence value for a synapse is GREATER (not equal) than this value,
 		//the synapse is said to be active.
