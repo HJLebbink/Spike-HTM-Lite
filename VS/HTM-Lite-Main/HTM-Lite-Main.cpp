@@ -41,12 +41,12 @@ inline void test_run()
 	const int N_BITS_CELL_LOCAL = 4;
 	const int SENSOR_DIM1_LOCAL = 20;
 	const int SENSOR_DIM2_LOCAL = 20;
-	const arch_t ARCH = arch_t::AVX512;
+	const arch_t ARCH = arch_t::RUNTIME;
 	const int HISTORY_SIZE = 8;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param;
-	param.n_time_steps = 200;
+	param.n_time_steps = 2000;
 	param.n_times = 1;
 	param.progress = false;
 	param.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -69,22 +69,19 @@ inline void test_swarm()
 {
 	// static properties: properties that need to be known at compile time:
 
-	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
-	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
-	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 100 * 8;
+	//const int N_BLOCKS = 9; // 1024 columns
+	//const int N_BLOCKS = 4096; // 262144 columns
+	//const int N_BLOCKS = 16384; // 1048576 columns
+	const int N_BLOCKS = 10 * 8;
 	const int N_COLUMNS_LOCAL = 64 * N_BLOCKS;
 	const int N_BITS_CELL_LOCAL = 4;
 	const int SENSOR_DIM1_LOCAL = 20;
 	const int SENSOR_DIM2_LOCAL = 20;
-	const arch_t ARCH = arch_t::AVX512;
+	const arch_t ARCH = arch_t::RUNTIME;
 	const int HISTORY_SIZE = 8;
 
-	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
-
-
 	Dynamic_Param param;
-	param.n_time_steps = 500;
+	param.n_time_steps = 1000;
 	param.n_times = 1;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -106,6 +103,7 @@ inline void test_swarm()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
+	using P = Static_Param<N_COLUMNS_LOCAL, N_BITS_CELL_LOCAL, SENSOR_DIM1_LOCAL, SENSOR_DIM2_LOCAL, ARCH, HISTORY_SIZE>;
 	htm::swarm::run_ga<P>(input_filename, param, options);
 }
 

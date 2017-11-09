@@ -277,8 +277,8 @@ namespace htm
 						assert_msg(segment_i < column.dd_segment_count, "TP:grow_DD_synapses: segment_i=", segment_i + " is too large. dd_segment_count=", column.dd_segment_count);
 						if (false) log_INFO_DEBUG("TP:adapt_segment: column ", column.id, "; segment_i ", segment_i);
 
-						if (P::ARCH == arch_t::X64) return adapt_segment_ref(column, segment_i, active_cells, permanence_inc, permanence_dec);
-						if (P::ARCH == arch_t::AVX512) return adapt_segment_avx512(column, segment_i, active_cells, permanence_inc, permanence_dec);
+						if (architecture_switch(P::ARCH) == arch_t::X64) return adapt_segment_ref(column, segment_i, active_cells, permanence_inc, permanence_dec);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) return adapt_segment_avx512(column, segment_i, active_cells, permanence_inc, permanence_dec);
 					}
 
 					template <typename P>
@@ -950,8 +950,8 @@ namespace htm
 						}
 						#endif
 
-						if (P::ARCH == arch_t::X64) return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
-						if (P::ARCH == arch_t::AVX512) return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
+						if (architecture_switch(P::ARCH) == arch_t::X64) return count_active_potential_DD_synapses_ref(column, segment_i, active_cells, param);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) return count_active_potential_DD_synapses_avx512(column, segment_i, active_cells, param);
 					}
 				}
 			

@@ -35,8 +35,24 @@ namespace htm
 	//========================================================================
 	enum arch_t
 	{
-		X64, AVX512
+		// reference implementation, regular c++ code
+		X64, 
+		// explicit use of AVX512 instructions (Skylake X)
+		AVX512, 
+		// determine instruction set a runtime
+		RUNTIME
 	};
+
+	arch_t architecture_switch(const arch_t arch)
+	{
+		switch (arch)
+		{
+			case arch_t::X64: return arch_t::X64;
+			case arch_t::AVX512: return arch_t::AVX512;
+			default: return (_may_i_use_cpu_feature(_FEATURE_AVX512F) == 1) ? arch_t::AVX512 : arch_t::X64;
+		}
+	}
+
 
 	static constexpr bool SP_GATHER = true;
 
@@ -265,6 +281,4 @@ namespace htm
 			return result.str();
 		}
 	};
-
-
 }

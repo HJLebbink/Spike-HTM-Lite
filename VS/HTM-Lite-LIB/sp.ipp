@@ -485,8 +485,8 @@ namespace htm
 				{
 					if (SP_GATHER)
 					{
-						if (P::ARCH == arch_t::X64) calc_overlap_ref(layer, param, sensor_activity, overlaps);
-						if (P::ARCH == arch_t::AVX512)
+						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_ref(layer, param, sensor_activity, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512)
 							if (P::N_SENSORS < 512)
 							{
 								calc_overlap_avx512_small_epi16(layer, param, sensor_activity, overlaps);
@@ -497,8 +497,8 @@ namespace htm
 					}
 					else
 					{
-						if (P::ARCH == arch_t::X64) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
-						if (P::ARCH == arch_t::AVX512) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) calc_overlap_scatter(layer, param, sensor_activity, overlaps);
 					}
 				}
 			}
@@ -583,13 +583,13 @@ namespace htm
 				{
 					if (SP_GATHER)
 					{
-						if (P::ARCH == arch_t::X64) update_synapses_ref(layer, param, active_columns, sensor_activity);
-						if (P::ARCH == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, sensor_activity);
 					}
 					else
 					{
-						if (P::ARCH == arch_t::X64) update_synapses_scatter(layer, param, active_columns, sensor_activity);
-						if (P::ARCH == arch_t::AVX512) update_synapses_scatter(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_scatter(layer, param, active_columns, sensor_activity);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_scatter(layer, param, active_columns, sensor_activity);
 					}
 				}
 			}
