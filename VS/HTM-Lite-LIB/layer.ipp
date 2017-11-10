@@ -73,7 +73,7 @@ namespace htm
 						const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
 						const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
 
-						for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
 						{
 							if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
 							{
@@ -95,6 +95,53 @@ namespace htm
 					}
 				}
 				
+				template <typename P>
+				void get_predicted_sensors_avx512(
+					const Layer<P>& layer,
+					const int sensor_threshold,
+					const Dynamic_Param& param,
+					//out
+					Layer<P>::Active_Visible_Sensors& predicted_sensor)
+				{
+					std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
+
+					Layer<P>::Active_Columns predicted_columns;
+
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					{
+						const auto& column = layer[column_i];
+						predicted_columns.set(column_i, column.active_dd_segments.any_current());
+					}
+
+					for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+					{
+						int sensor_activity = 0;
+
+						const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
+						const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
+
+						for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
+						{
+							if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+							{
+								const int column_i = destination_columns[synapse_i];
+								if (predicted_columns.get(column_i))
+								{
+									sensor_activity++;
+									if (sensor_activity > sensor_threshold) break;
+								}
+							}
+						}
+						predicted_sensor_activity[sensor_i] = sensor_activity;
+					}
+
+					predicted_sensor.clear_all();
+					for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+					{
+						if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
+					}
+				}
+
 				//return the number of times a sensor is predicteed.
 				// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
 				template <typename P>
@@ -254,10 +301,11 @@ namespace htm
 		template <typename P>
 		void init(Layer<P>& layer, const Dynamic_Param& param)
 		{
-			for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+			for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 			{
 				layer.sp_pd_destination_column[sensor_i].clear();
 				layer.sp_pd_synapse_permanence[sensor_i].clear();
+				layer.sp_pd_synapse_count[sensor_i] = 0;
 			}
 
 			//init permanence values
@@ -269,9 +317,23 @@ namespace htm
 				// reset pd synapses
 				for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 				{
-					const int random_sensor = random::rand_int32(0, P::N_VISIBLE_SENSORS - 1, column.random_number);
-					layer.sp_pd_destination_column[random_sensor].push_back(column_i);
-					layer.sp_pd_synapse_permanence[random_sensor].push_back(param.SP_PD_PERMANENCE_INIT);
+					const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, column.random_number);
+
+					auto& destination = layer.sp_pd_destination_column[random_sensor];
+					auto& permanence = layer.sp_pd_synapse_permanence[random_sensor];
+					const int old_size = layer.sp_pd_synapse_count[random_sensor];
+					const int new_size = old_size + 1;
+					
+					if (destination.size() <= new_size)
+					{
+						const int new_capacity = tools::multiple_16(new_size);
+						destination.resize(new_capacity);
+						permanence.resize(new_capacity);
+					}
+					
+					destination[old_size] = column_i;
+					permanence[old_size] = param.SP_PD_PERMANENCE_INIT;
+					layer.sp_pd_synapse_count[random_sensor] = new_size;
 
 					if (false) log_INFO("Layer::init: column ", column_i, "; synapse ", synapse_i, "; pd_synapse_origin ", random_sensor, "; current_random_number ", static_cast<int>(random::priv::current_random_number));
 				}

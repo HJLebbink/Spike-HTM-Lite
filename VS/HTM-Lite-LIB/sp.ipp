@@ -542,18 +542,20 @@ namespace htm
 				{
 					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 					{
-						const int increment = (active_sensors.get(sensor_i)) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC;
+						const bool sensor_is_active = active_sensors.get(sensor_i);
 
 						auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
 						const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
 
-						for (auto synapse_i = 0; synapse_i < destination_columns.size(); ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
 						{
 							const int column_i = destination_columns[synapse_i];
 							if (active_columns.get(column_i))
 							{
-								const int old_permanence = permanence[synapse_i];
-								const int new_permanence = std::min(127, std::max(-128, old_permanence + increment));
+								const Permanence old_permanence = permanence[synapse_i];
+								const Permanence new_permanence = (sensor_is_active) 
+									? add_saturate(old_permanence, param.SP_PD_PERMANENCE_INC)
+									: sub_saturate(old_permanence, param.SP_PD_PERMANENCE_DEC);
 
 								if (false) log_INFO_DEBUG("SP:update_synapses_scatter: inc: column ", column_i, "; synpase ", synapse_i, ": old permanence ", old_permanence, "; new permanence = ", new_permanence, ".");
 								permanence[synapse_i] = new_permanence;
@@ -576,7 +578,7 @@ namespace htm
 
 					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 					{
-						permanence_org.push_back(vector_type(layer.sp_pd_synapse_permanence[sensor_i]));
+						permanence_org[sensor_i] = vector_type(layer.sp_pd_synapse_permanence[sensor_i]);
 					}
 					update_synapses_ref(layer, param, active_columns, active_sensors);
 
@@ -587,24 +589,25 @@ namespace htm
 					}
 					#endif
 						
+					auto active_columns_ptr = reinterpret_cast<const __m512i *>(active_columns.data());
+
 					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 					{
 						auto permanence_epi8_ptr = reinterpret_cast<__m128i *>(layer.sp_pd_synapse_permanence[sensor_i].data());
 						auto destination_columns_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_destination_column[sensor_i].data());
-						auto active_columns_ptr = active_columns.data();
 
 						const __m128i inc_epi8 = _mm_set1_epi8(active_sensors.get(sensor_i) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC);
 
-						const int n_blocks = tools::n_blocks_16(layer.sp_pd_destination_column[sensor_i].size());
+						const int n_blocks = tools::n_blocks_16(layer.sp_pd_synapse_count[sensor_i]);
 						for (int block = 0; block < n_blocks; ++block)
 						{
-							const __m512i column_epi32 = destination_columns_epi32_ptr[block];
+							const __m512i destination_columns_epi32 = destination_columns_epi32_ptr[block];
 
-							const __m512i int_addr = _mm512_srli_epi32(column_epi32, 2);
+							const __m512i int_addr = _mm512_srli_epi32(destination_columns_epi32, 2);
 							const __m512i sensor_int = _mm512_i32gather_epi32(int_addr, active_columns_ptr, 4);
-							const __m512i byte_pos_in_int = _mm512_and_epi32(column_epi32, _mm512_set1_epi32(0b11));
-							const __m512i bit_mask = _mm512_sllv_epi32(_mm512_set1_epi32(1), byte_pos_in_int);
-							const __mmask16 mask_16 = _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, bit_mask), bit_mask);
+							const __m512i byte_pos_in_int = _mm512_and_epi32(destination_columns_epi32, _mm512_set1_epi32(0b11));
+							const __m512i bit_mask_epi32 = _mm512_sllv_epi32(_mm512_set1_epi32(1), byte_pos_in_int);
+							const __mmask16 mask_16 = _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, bit_mask_epi32), bit_mask_epi32);
 
 							const __m128i old_permanence = permanence_epi8_ptr[block];
 							permanence_epi8_ptr[block] = _mm_mask_adds_epu8(old_permanence, mask_16, old_permanence, inc_epi8);
@@ -616,7 +619,7 @@ namespace htm
 					{
 						const auto& ref = permanence_ref[sensor_i];
 						const auto& org = permanence_org[sensor_i];
-						for (auto synapse_i = 0; synapse_i < ref.size(); synapse_i++)
+						for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
 						{
 							if (ref[synapse_i] != org[synapse_i])
 							{
@@ -635,7 +638,7 @@ namespace htm
 					const Layer<P>::Active_Sensors& active_sensors)
 				{
 					if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, active_sensors);
-					if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_avx512(layer, param, active_columns, active_sensors);
+					if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, active_sensors);
 				}
 			}
 
@@ -705,23 +708,26 @@ namespace htm
 			template <typename P>
 			void bump_up_weak_columns(
 				Layer<P>& layer,
-				const int column_i,
 				const Dynamic_Param& param,
-				const float overlap_duty_cycle,
-				const float min_overlap_duty_cycle)
+				const std::vector<float>& overlap_duty_cycle,
+				const std::vector<float>& min_overlap_duty_cycle)
 			{
-				if (false) log_INFO("SP:bump_up_weak_columns: column ", column_i, "; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
+				//if (false) log_INFO("SP:bump_up_weak_columns: column ", column_i, "; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
 
-				if (overlap_duty_cycle < min_overlap_duty_cycle) // the provided column is a weak column
+				for (auto sensor_i = 0; sensor_i < P::SP_N_PD_SYNAPSES; ++sensor_i)
 				{
-					if (false) log_INFO("SP:bump_up_weak_columns: column ", column_i, " is bumped up; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
+					const auto& destination = layer.sp_pd_destination_column[sensor_i];
+					auto& permanance = layer.sp_pd_synapse_permanence[sensor_i];
 
-					auto& permanance = layer.sp_pd_synapse_permanence[column_i];
-					for (auto synapse_i = 0; synapse_i < permanance.size(); ++synapse_i)
+					for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
 					{
-						if (permanance[synapse_i] < param.SP_PD_CONNECTED_THRESHOLD)
+						const auto column_i = destination[synapse_i];
+						if (overlap_duty_cycle[column_i] < min_overlap_duty_cycle[column_i]) // the provided column is a weak column
 						{
-							permanance[synapse_i] += param.SP_PD_PERMANENCE_INC_WEAK;
+							if (permanance[synapse_i] < param.SP_PD_CONNECTED_THRESHOLD)
+							{
+								permanance[synapse_i] += param.SP_PD_PERMANENCE_INC_WEAK;
+							}
 						}
 					}
 				}
@@ -729,8 +735,7 @@ namespace htm
 
 			template <typename P>
 			void update_inhibition_radius(
-				const Layer<P>& layer,
-				Column<P>& column)
+				const Layer<P>& layer)
 			{
 				if (P::SP_GLOBAL_INHIBITION)
 				{
@@ -744,23 +749,25 @@ namespace htm
 
 			template <typename P>
 			void update_min_duty_cycles(
-				Layer<P>& layer,
-				const int column_i)
+				Layer<P>& layer)
 			{
 				if (P::SP_GLOBAL_INHIBITION)
 				{
 					//Real maxOverlapDutyCycles = *max_element(overlapDutyCycles_.begin(), overlapDutyCycles_.end());
 					//fill(minOverlapDutyCycles_.begin(), minOverlapDutyCycles_.end(), minPctOverlapDutyCycles_ * maxOverlapDutyCycles);
 
-					if (column_i == 0)
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						const float max_overlap_duty_cycles = max(layer.sp_overlap_duty_cycles);
-						layer.sp_min_overlap_duty_cycles[column_i] = P::SP_MIN_PCT_OVERLAP_DUTY_CYCLES * max_overlap_duty_cycles;
-						if (false) log_INFO_DEBUG("SP:update_min_duty_cycles: min_overlap_duty_cycles of column ", column_i, " = ", layer.sp_min_overlap_duty_cycles[column_i], ".");
-					}
-					else
-					{
-						layer.sp_min_overlap_duty_cycles[column_i] = layer.sp_min_overlap_duty_cycles[0];
+						if (column_i == 0)
+						{
+							const float max_overlap_duty_cycles = max(layer.sp_overlap_duty_cycles);
+							layer.sp_min_overlap_duty_cycles[column_i] = P::SP_MIN_PCT_OVERLAP_DUTY_CYCLES * max_overlap_duty_cycles;
+							if (false) log_INFO_DEBUG("SP:update_min_duty_cycles: min_overlap_duty_cycles of column ", column_i, " = ", layer.sp_min_overlap_duty_cycles[column_i], ".");
+						}
+						else
+						{
+							layer.sp_min_overlap_duty_cycles[column_i] = layer.sp_min_overlap_duty_cycles[0];
+						}
 					}
 				}
 				else
@@ -823,17 +830,17 @@ namespace htm
 						auto& column = layer[column_i];
 						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns.get(column_i));
 						priv::update_boost_factors(layer, column, param, layer.sp_active_duty_cycles[column_i]);
-
-						if (false)
+					}
+					if (false)
+					{
+						priv::bump_up_weak_columns(layer, param, layer.sp_overlap_duty_cycles, layer.sp_min_overlap_duty_cycles);
+						if (priv::is_update_round(layer))
 						{
-							priv::bump_up_weak_columns(layer, column_i, param, layer.sp_overlap_duty_cycles[column_i], layer.sp_min_overlap_duty_cycles[column_i]);
-							if (priv::is_update_round(layer))
-							{
-								priv::update_inhibition_radius(layer, column);
-								priv::update_min_duty_cycles(layer, column_i);
-							}
+							priv::update_inhibition_radius(layer);
+							priv::update_min_duty_cycles(layer);
 						}
 					}
+
 					//TODO: 1] update layer_boost(column_i)
 					//TODO: 2] increase permanence if input overlap is small
 				}

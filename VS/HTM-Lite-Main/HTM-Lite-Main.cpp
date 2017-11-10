@@ -30,7 +30,7 @@
 using namespace htm;
 using namespace htm::types;
 
-inline void test_layer()
+inline void test_1layer()
 {
 	// static properties: properties that need to be known at compile time:
 
@@ -46,13 +46,14 @@ inline void test_layer()
 	const int N_HIDDEN_SENSORS = 0;
 
 	const int HISTORY = 8;
+	//const arch_t ARCH = arch_t::X64;
 	const arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param;
 	param.learn = true;
 	param.n_time_steps = 300;
-	param.n_times = 10;
+	param.n_times = 20;
 	param.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
@@ -208,8 +209,8 @@ inline void test_swarm()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	//test_layer();
-	test_network();
+	test_1layer();
+	//test_network();
 	//test_swarm();
 	const auto end_time = std::chrono::system_clock::now();
 

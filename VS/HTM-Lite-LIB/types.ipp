@@ -677,6 +677,9 @@ namespace htm
 			//Proximal dendrite synapse permanence.
 			std::vector<std::vector<Permanence, priv::Allocator>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence, priv::Allocator>>(P::N_SENSORS);
 
+			//Number of dendrite synapses
+			std::vector<int> sp_pd_synapse_count = std::vector<int>(P::N_SENSORS);
+
 			//moving average denoting the frequency of column activation: used by boosting
 			std::vector<float> sp_active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
 
