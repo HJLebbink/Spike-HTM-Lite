@@ -45,7 +45,7 @@ inline void test_layer()
 	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 	const int N_HIDDEN_SENSORS = 0;
 
-	const int HISTORY = 2;
+	const int HISTORY = 8;
 	const arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
@@ -86,13 +86,12 @@ inline void test_network()
 	const int N_SENSORS_DIM1 = 20;
 	const int N_SENSORS_DIM2 = 20;
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int N_HIDDEN_VISIBLE_SENSORS_L1 = 0;
-	const int HISTORY_L1 = 2;
+	const int HISTORY_L1 = 8;
 
 	const int N_BLOCKS_L2 = 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_L2 = 2;
+	const int HISTORY_L2 = 8;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -114,20 +113,50 @@ inline void test_network()
 	Dynamic_Param param2(param1);
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+	if (true)
+	{
+		using Network_Config = network::network_2Layer<
+			N_VISIBLE_SENSORS_L1,
+			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+			ARCH>;
 
-	using Network_Config = network::network_2Layer<
-		N_COLUMNS_L1, N_BITS_CELL_L1, N_VISIBLE_SENSORS_L1, HISTORY_L1,
-		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2, ARCH>;
+		using P1 = Network_Config::P_L1;
+		using P2 = Network_Config::P_L2;
 
-	using P1 = Network_Config::P_L1;
-	using P2 = Network_Config::P_L2;
+		Layer<P1> layer1;
+		Layer<P2> layer2;
 
-	Layer<P1> layer1;
-	Layer<P2> layer2;
+		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+		htm::network::run_multiple_times(data, layer1, layer2, param1, param2);
+	}
+	else
+	{
+		Dynamic_Param param3(param1);
 
-	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+		const int N_BLOCKS_L3 = 1 * 8;
+		const int N_COLUMNS_L3 = 64 * N_BLOCKS_L2;
+		const int N_BITS_CELL_L3 = 4;
+		const int HISTORY_L3 = 8;
 
-	htm::network::run_multiple_times(data, layer1, layer2, param1, param2);
+		using Network_Config = network::network_3Layer<
+			N_VISIBLE_SENSORS_L1,
+			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+			N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
+			ARCH>;
+
+		using P1 = Network_Config::P_L1;
+		using P2 = Network_Config::P_L2;
+		using P3 = Network_Config::P_L3;
+		
+		Layer<P1> layer1;
+		Layer<P2> layer2;
+		Layer<P3> layer3;
+
+		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+		htm::network::run_multiple_times(data, layer1, layer2, layer3, param1, param2, param3);
+	}
 }
 
 inline void test_swarm()
@@ -179,8 +208,8 @@ inline void test_swarm()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	//test_layer();
-	test_network();
+	test_layer();
+	//test_network();
 	//test_swarm();
 	const auto end_time = std::chrono::system_clock::now();
 

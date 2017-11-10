@@ -31,6 +31,10 @@ namespace htm
 
 		namespace priv
 		{
+			//using Allocator = std::allocator<int>;
+			using Allocator = std::allocator<__m512i>;
+
+
 			template <int SIZE> struct basetype {};
 
 			template <> struct basetype<2> { using type = int8_t; };
@@ -108,11 +112,11 @@ namespace htm
 		struct Bitset_Sparse
 		{
 			static constexpr int SIZE = SIZE_IN;
-			std::vector<int> _data;
+			std::vector<int, priv::Allocator> _data;
 
 			Bitset_Sparse()
 			{
-				this->_data = std::vector<int>(0);
+				this->_data = std::vector<int, priv::Allocator>(0);
 			}
 			void set(const std::vector<char>& bitset)
 			{
@@ -298,12 +302,12 @@ namespace htm
 		{
 			static constexpr int SIZE = SIZE_IN;
 			static constexpr int N_BLOCKS = tools::n_blocks_32(SIZE);
-			std::vector<int> _data;
+			std::vector<int, priv::Allocator> _data;
 
 			// default constructor
 			Bitset_Compact()
 			{
-				this->_data = std::vector<int>(N_BLOCKS, 0);
+				this->_data = std::vector<int, priv::Allocator>(N_BLOCKS, 0);
 			}
 			bool get(int i) const
 			{
@@ -507,7 +511,7 @@ namespace htm
 					for (int i = 0; i < SIZE - 1; ++i)
 					{
 						prev_index = this->get_prev_index(prev_index);
-						const std::vector<int>& d = this->_data[prev_index]._data;
+						const auto& d = this->_data[prev_index]._data;
 						for (int j = 0; j < d.size(); ++j)
 						{
 							this->_sparse_history.push_back(htm::tools::create_delay_and_cell_id(d[j], i + 1));

@@ -190,7 +190,7 @@ namespace htm
 		//How often the complete learning run will be repeated
 		int n_times = 1;
 
-		//Whehter progress will be shown
+		//Whether progress will be shown
 		bool progress = false;
 
 		//How often progress will be shown

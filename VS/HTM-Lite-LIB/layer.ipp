@@ -341,46 +341,6 @@ namespace htm
 				if (false) log_INFO("layer:run: pd_synapes at t = ", time, ": ", print::print_pd_synapses(layer), "\n");
 				#endif
 			}
-			
-			template <bool LEARN, typename P>
-			int run(
-				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
-				Layer<P>& layer,
-				const Dynamic_Param& param)
-			{
-				int total_mismatch = 0;
-				int mismatch = 0;
-				int current_mismatch = 0;
-
-				for (int time = 0; time < param.n_time_steps; ++time)
-				{
-					encoder::get_active_sensors<P>(time, data, layer.active_sensors);
-					add_sensor_noise<P>(layer.active_sensors);
-					one_step<LEARN>(layer.active_sensors, layer, time, param);
-
-					if (param.progress_display_interval > 0)
-					{
-						current_mismatch = calc_mismatch(time, param, data, layer);
-					}
-					total_mismatch += current_mismatch;
-
-					if (!param.quiet)
-					{
-						mismatch += current_mismatch;
-
-						if (time == 0) std::cout << "layer:run: total mismatch: ";
-						if (((time % param.progress_display_interval) == 0) && (time > 0))
-						{
-							const float average_mismatch = static_cast<float>(mismatch) / param.progress_display_interval;
-							std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-							mismatch = 0;
-						}
-					}
-					if (param.progress) show_progress(time, layer, param, data, layer.active_columns);
-				}
-				if (!param.quiet) std::cout << std::endl;
-				return total_mismatch;
-			}
 		}
 
 		//Reset the provided layer with the properties as provided in param
@@ -436,6 +396,21 @@ namespace htm
 			layer.winner_cells.reset();
 		}
 
+
+		template <typename P>
+		void one_step(
+			const Layer<P>::Active_Sensors& active_sensors,
+			Layer<P>& layer,
+			const int time,
+			const Dynamic_Param& param)
+		{
+			if (param.learn)
+				priv::one_step<true>(active_sensors, layer, time, param);
+			else
+				priv::one_step<false>(active_sensors, layer, time, param);
+		}
+
+
 		//Run the provided layer once, update steps as provided in param
 		template <typename P>
 		int run(
@@ -443,9 +418,38 @@ namespace htm
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
-			return (param.learn)
-				? priv::run<true>(data, layer, param)
-				: priv::run<false>(data, layer, param);
+			int total_mismatch = 0;
+			int mismatch = 0;
+			int current_mismatch = 0;
+
+			for (int time = 0; time < param.n_time_steps; ++time)
+			{
+				encoder::get_active_sensors<P>(time, data, layer.active_sensors);
+				priv::add_sensor_noise<P>(layer.active_sensors);
+				one_step(layer.active_sensors, layer, time, param);
+
+				if (param.progress_display_interval > 0)
+				{
+					current_mismatch = priv::calc_mismatch(time, param, data, layer);
+				}
+				total_mismatch += current_mismatch;
+
+				if (!param.quiet)
+				{
+					mismatch += current_mismatch;
+
+					if (time == 0) std::cout << "layer:run: total mismatch: ";
+					if (((time % param.progress_display_interval) == 0) && (time > 0))
+					{
+						const float average_mismatch = static_cast<float>(mismatch) / param.progress_display_interval;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						mismatch = 0;
+					}
+				}
+				if (param.progress) priv::show_progress(time, layer, param, data, layer.active_columns);
+			}
+			if (!param.quiet) std::cout << std::endl;
+			return total_mismatch;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
