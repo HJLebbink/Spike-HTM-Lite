@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <iomanip>      // std::setw
 
-#include <intrin.h>
+#include <immintrin.h> // _may_i_use_cpu_feature
 
 #include "..\Spike-Tools-Lib\log.ipp"
 #include "..\Spike-Tools-Lib\random.ipp"
@@ -52,9 +52,6 @@ namespace htm
 			default: return (_may_i_use_cpu_feature(_FEATURE_AVX512F) == 1) ? arch_t::AVX512 : arch_t::X64;
 		}
 	}
-
-
-	static constexpr bool SP_GATHER = true;
 
 	using Permanence = int8_t; // = signed char
 

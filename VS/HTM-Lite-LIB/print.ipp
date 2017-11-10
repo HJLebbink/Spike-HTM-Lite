@@ -362,46 +362,6 @@ namespace htm
 			return result.str();
 		}
 		
-		template <typename P>
-		std::string print_pd_synapses(
-			const Column<P>& column)
-		{
-			std::ostringstream result;
-			//const auto n_segments = column.dd_segment_count;
-			result << "Column " << std::setw(4) << column.id << ": permanence:";
-
-			for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-			{
-				const float permanence = column.pd_synapse_permanence[synapse_i];
-				result << " " << std::fixed << std::setprecision(3) << permanence;
-			}
-			result << "\n";
-
-			if (false)
-			{
-				result << "Column " << std::setw(4) << column.id << ": cell org  :";
-				for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-				{
-					const auto sensor_idx = column.pd_synapse_origin[synapse_i];
-					result << " " << std::setw(5) << sensor_idx;
-				}
-				result << "\n";
-			}
-			return result.str();
-		}
-
-		template <typename P>
-		std::string print_pd_synapses(
-			const Layer<P>& layer)
-		{
-			std::ostringstream result;
-			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-			{
-				result << print_pd_synapses(layer[column_i]);
-			}
-			return result.str();
-		}
-
 		std::string print_int_array(const std::vector<int>& a, const int size) {
 			std::ostringstream result;
 			for (auto i = 0; i < size; ++i) result << " " << a[i];

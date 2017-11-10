@@ -56,102 +56,34 @@ namespace htm
 			{
 				std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
-				if (SP_GATHER)
+				Layer<P>::Active_Columns predicted_columns;
+
+				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-					{
-						const auto& column = layer[column_i];
-						const bool column_is_predicted = column.active_dd_segments.any_current();
-						if (column_is_predicted)
-						{
-							for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-							{
-								if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
-								{
-									const auto sensor_i = column.pd_synapse_origin[synapse_i]; // gather
-									predicted_sensor_activity[sensor_i]++;
-								}
-							}
-						}
-					}
+					const auto& column = layer[column_i];
+					predicted_columns.set(column_i, column.active_dd_segments.any_current());
 				}
-				else
+
+				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 				{
-					if (true)
-					{	// somewhat slow method
-						Layer<P>::Active_Columns predicted_columns;
+					int sensor_activity = 0;
 
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-						{
-							const auto& column = layer[column_i];
-							predicted_columns.set(column_i, column.active_dd_segments.any_current());
-						}
+					const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
+					const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
 
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-						{
-							int sensor_activity = 0;
-
-							const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
-							const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
-
-							for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
-							{
-								if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
-								{
-									const int column_i = destination_columns[synapse_i];
-									if (predicted_columns.get(column_i))
-									{
-										sensor_activity++;
-										if (sensor_activity > sensor_threshold) break;
-									}
-								}
-							}
-							predicted_sensor_activity[sensor_i] = sensor_activity;
-						}
-					}
-					else
+					for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
 					{
-						/*
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
 						{
-							const Column& column = layer[column_i];
-							if (column.active_dd_segments.any_current())
+							const int column_i = destination_columns[synapse_i];
+							if (predicted_columns.get(column_i))
 							{
-								for (auto sensor_i : layer.sp_pd_origin_sensor[column_i])
-								{
-									const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i][column_i];
-									if (permanence > param.SP_PD_CONNECTED_THRESHOLD)
-									{
-
-									}
-								}
+								sensor_activity++;
+								if (sensor_activity > sensor_threshold) break;
 							}
 						}
-
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-						{
-							int sensor_activity = 0;
-
-							const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
-							const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
-
-
-							for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
-							{
-								if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
-								{
-									const int column_i = destination_columns[synapse_i];
-									if (predicted_columns.get(column_i))
-									{
-										sensor_activity++;
-										if (sensor_activity > sensor_threshold) break;
-									}
-								}
-							}
-							predicted_sensor_activity[sensor_i] = sensor_activity;
-						}
-						*/
 					}
+					predicted_sensor_activity[sensor_i] = sensor_activity;
 				}
 
 				predicted_sensor.clear_all();
@@ -229,41 +161,6 @@ namespace htm
 			}
 
 			template <typename P>
-			void get_projected_boost_factors(
-				const Layer<P>& layer,
-				const Dynamic_Param& param,
-				std::vector<float>& projected_boost_factor) // N_SENSORS
-			{
-				std::vector<int> counter = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
-
-				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-				{
-					projected_boost_factor[sensor_i] = 0.001;
-				}
-
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-				{
-					const auto& column = layer[column_i];
-					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-					{
-						if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
-						{
-							const auto sensor_idx = column.pd_synapse_origin[synapse_i];
-							projected_boost_factor[sensor_idx] += column.boost_factor;
-							counter[sensor_idx]++;
-						}
-					}
-				}
-				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-				{
-					if (counter[sensor_i] > 0)
-					{
-						projected_boost_factor[sensor_i] = projected_boost_factor[sensor_i] / counter[sensor_i];
-					}
-				}
-			}
-
-			template <typename P>
 			void show_progress(
 				const int t,
 				const Layer<P>& layer,
@@ -298,12 +195,6 @@ namespace htm
 					// print the boost values
 					if (false) log_INFO("boost factors = \n", print::print_boost_factors(layer, P::N_COLUMNS / 20));
 
-					if (false)
-					{
-						auto projected_boost_factors = std::vector<float>(P::N_VISIBLE_SENSORS);
-						get_projected_boost_factors(layer, param, projected_boost_factors);
-						log_INFO("projected boost factors = \n", print::print_float_array(projected_boost_factors, param.n_visible_sensors_dim1));
-					}
 					std::cout << "=============================================================" << std::endl;
 				}
 			}
@@ -338,7 +229,6 @@ namespace htm
 				#if _DEBUG
 				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
 				if (false) log_INFO("layer:run: dd_synapes at t = ", time, ": ", print::print_dd_synapses(layer), "\n");
-				if (false) log_INFO("layer:run: pd_synapes at t = ", time, ": ", print::print_pd_synapses(layer), "\n");
 				#endif
 			}
 		}
@@ -347,13 +237,10 @@ namespace htm
 		template <typename P>
 		void init(Layer<P>& layer, const Dynamic_Param& param)
 		{
-			if (!SP_GATHER)
+			for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 			{
-				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-				{
-					layer.sp_pd_destination_column[sensor_i].clear();
-					layer.sp_pd_synapse_permanence[sensor_i].clear();
-				}
+				layer.sp_pd_destination_column[sensor_i].clear();
+				layer.sp_pd_synapse_permanence[sensor_i].clear();
 			}
 
 			//init permanence values
@@ -366,16 +253,9 @@ namespace htm
 				for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 				{
 					const int random_sensor = random::rand_int32(0, P::N_VISIBLE_SENSORS - 1, column.random_number);
-					if (SP_GATHER)
-					{
-						column.pd_synapse_permanence[synapse_i] = param.SP_PD_PERMANENCE_INIT;
-						column.pd_synapse_origin[synapse_i] = random_sensor;
-					}
-					else
-					{
-						layer.sp_pd_destination_column[random_sensor].push_back(column_i);
-						layer.sp_pd_synapse_permanence[random_sensor].push_back(param.SP_PD_PERMANENCE_INIT);
-					}
+					layer.sp_pd_destination_column[random_sensor].push_back(column_i);
+					layer.sp_pd_synapse_permanence[random_sensor].push_back(param.SP_PD_PERMANENCE_INIT);
+
 					if (false) log_INFO("Layer::init: column ", column_i, "; synapse ", synapse_i, "; pd_synapse_origin ", random_sensor, "; current_random_number ", static_cast<int>(random::priv::current_random_number));
 				}
 

@@ -80,7 +80,7 @@ inline void test_network()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS_L1 = 1 * 8;
+	const int N_BLOCKS_L1 = 4 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
 	const int N_SENSORS_DIM1 = 20;
@@ -88,7 +88,7 @@ inline void test_network()
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 	const int HISTORY_L1 = 8;
 
-	const int N_BLOCKS_L2 = 1 * 8;
+	const int N_BLOCKS_L2 = 2 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
 	const int HISTORY_L2 = 8;
@@ -99,7 +99,7 @@ inline void test_network()
 	Dynamic_Param param1;
 	param1.learn = true;
 	param1.n_time_steps = 300;
-	param1.n_times = 10;
+	param1.n_times = 1;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
@@ -113,7 +113,7 @@ inline void test_network()
 	Dynamic_Param param2(param1);
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-	if (true)
+	if (false)
 	{
 		using Network_Config = network::network_2Layer<
 			N_VISIBLE_SENSORS_L1,
@@ -208,8 +208,8 @@ inline void test_swarm()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	test_layer();
-	//test_network();
+	//test_layer();
+	test_network();
 	//test_swarm();
 	const auto end_time = std::chrono::system_clock::now();
 

@@ -34,7 +34,7 @@
 namespace htm
 {
 	//HTM Spacial Pooler
-	namespace sp 
+	namespace sp
 	{
 		using namespace ::tools::log;
 		using namespace ::tools::assert;
@@ -207,42 +207,8 @@ namespace htm
 
 			namespace calc_overlap
 			{
-				// Why is this an inefficient algorithm: for example, assume 1024 columns,
-				// each column has 256 synapses and there are 400 sensor cells. The 400 cells 
-				// are stored in 40 bytes, which fits in one L1 cache line (which is 64 bytes = 512 bits),
-				// every columns is going to read 256 bytes, that is, 256KB will be read in total, 
-				// thus every byte (of the 40) will on average be read 6553 times! Since only 5 percent 
-				// of the sensors are active, it may be 20 times faster to do a scatter instead of a gather.
-
 				template <typename P>
-				void calc_overlap_ref(
-					const Layer<P>& layer,
-					const Dynamic_Param& param,
-					const Layer<P>::Active_Sensors& active_sensors,
-					//out
-					std::vector<int>& overlaps) //size = P::N_COLUMNS
-				{
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-					{
-						const auto& column = layer[column_i];
-
-						int overlap = 0;
-						for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
-						{
-							if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
-							{
-								const auto origin_sensor = column.pd_synapse_origin[synapse_i];
-								overlap += active_sensors.get(origin_sensor); // deadly gather here!
-							}
-						}
-						if (false) log_INFO_DEBUG("SP:calc_overlap_ref: column ", column.id, " has overlap = ", overlap, ".\n");
-
-						overlaps[column_i] = (overlap < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap;
-					}
-				}
-
-				template <typename P>
-				void calc_overlap_scatter(
+				void calc_overlap_scatter_ref(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
 					const Layer<P>::Active_Sensors& active_sensors,
@@ -268,211 +234,248 @@ namespace htm
 					}
 				}
 
-				__m512i get_sensors_epi32(
-					const __mmask16 mask,
-					const __m512i origin,
-					const void * active_sensors_ptr)
+				namespace gather
 				{
-					const __m512i int_addr = _mm512_srli_epi32(origin, 5);
-					const __m512i pos_in_int = _mm512_and_epi32(origin, _mm512_set1_epi32(0b11111));
-					const __m512i sensor_int = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr, active_sensors_ptr, 4);
-					const __m512i sensors = _mm512_srlv_epi32(sensor_int, pos_in_int);
-					return _mm512_and_epi32(sensors, _mm512_set1_epi32(1));
-				}
+					// Why is this an inefficient algorithm: for example, assume 1024 columns,
+					// each column has 256 synapses and there are 400 sensor cells. The 400 cells 
+					// are stored in 40 bytes, which fits in one L1 cache line (which is 64 bytes = 512 bits),
+					// every columns is going to read 256 bytes, that is, 256KB will be read in total, 
+					// thus every byte (of the 40) will on average be read 6553 times! Since only 5 percent 
+					// of the sensors are active, it may be 20 times faster to do a scatter instead of a gather.
 
-				__m512i get_sensors_epi32(
-					const __mmask16 mask,
-					const __m512i origin_epi32,
-					const __m512i active_sensors)
-				{
-					const __m512i int_addr = _mm512_srli_epi32(origin_epi32, 5);
-					const __m512i pos_in_int = _mm512_and_epi32(origin_epi32, _mm512_set1_epi32(0b11111));
-					const __m512i sensor_int = _mm512_mask_permutexvar_epi32(_mm512_setzero_epi32(), mask, int_addr, active_sensors);
-					const __m512i sensors = _mm512_srlv_epi32(sensor_int, pos_in_int);
-					return _mm512_and_epi32(sensors, _mm512_set1_epi32(1));
-				}
-
-				__m512i get_sensors_epi16(
-					const __mmask32 mask,
-					const __m512i origin_epi32,
-					const __m512i active_sensors)
-				{
-					const __m512i short_addr = _mm512_srli_epi16(origin_epi32, 4);
-					const __m512i pos_in_int = _mm512_and_si512(origin_epi32, _mm512_set1_epi16(0b1111));
-					const __m512i sensor_int = _mm512_mask_permutexvar_epi16(_mm512_setzero_epi32(), mask, short_addr, active_sensors);
-					const __m512i sensors = _mm512_srlv_epi16(sensor_int, pos_in_int);
-					return _mm512_and_si512(sensors, _mm512_set1_epi16(1));
-				}
-
-				template <typename P>
-				void calc_overlap_avx512(
-					const Layer<P>& layer,
-					const Dynamic_Param& param,
-					const Layer<P>::Active_Sensors& active_sensors,
-					//out 
-					std::vector<int>& overlaps) //size = P::N_COLUMNS
-				{
-					const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
-					auto active_sensors_ptr = active_sensors.data();
-					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
-
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					template <typename P>
+					void calc_overlap_gather_ref(
+						const Layer<P>& layer,
+						const Dynamic_Param& param,
+						const Layer<P>::Active_Sensors& active_sensors,
+						//out
+						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
-						const auto& column = layer[column_i];
-						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
-						auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
-
-						__m512i overlap = _mm512_setzero_epi32();
-
-						for (int block = 0; block < n_blocks; ++block)
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
-							for (int i = 0; i < 4; ++i)
+							const auto& column = layer[column_i];
+
+							int overlap = 0;
+							for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 							{
-								const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
-								if (mask_16 != 0) overlap = _mm512_add_epi32(overlap, get_sensors_epi32(mask_16, origin_epi32_ptr[(block * 4) + i], active_sensors_ptr));
-							}
-						}
-						const int overlap_int = _mm512_reduce_add_epi32(overlap);
-						overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
-
-						if (false) log_INFO_DEBUG("SP:calc_overlap_avx512: column ", column.id, " has overlap = ", overlaps[column_i], ".\n");
-					}
-					#if _DEBUG
-					std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-					priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-					{
-						const int overlap_ref = overlaps_ref[column_i];
-						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
-					}
-					#endif
-				}
-
-				//P::N_SENSORS < 512
-				template <typename P>
-				void calc_overlap_avx512_small_epi32(
-					const Layer<P>& layer,
-					const Dynamic_Param& param,
-					const Layer<P>::Active_Sensors& active_sensors,
-					//out 
-					std::vector<int>& overlaps)
-				{
-					assert_msg(P::N_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
-
-					const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
-					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
-
-					std::array<int, 16> t = { 0 };
-					for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
-					{
-						t[i] = active_sensors._data[i];
-					}
-					const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
-
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-					{
-						const auto& column = layer[column_i];
-						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
-						auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
-
-						__m512i overlap_epi16 = _mm512_setzero_epi32();
-
-						for (int block = 0; block < n_blocks; ++block)
-						{
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
-							for (int i = 0; i < 4; ++i)
-							{
-								const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
-								//if (mask_16 != 0) // slower with this check
+								if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
 								{
-									overlap_epi16 = _mm512_add_epi32(overlap_epi16, get_sensors_epi32(mask_16, origin_epi32_ptr[(block * 4) + i], active_sensors_simd));
+									const auto origin_sensor = column.pd_synapse_origin[synapse_i];
+									overlap += active_sensors.get(origin_sensor); // deadly gather here!
 								}
 							}
+							if (false) log_INFO_DEBUG("SP:calc_overlap_ref: column ", column.id, " has overlap = ", overlap, ".\n");
+
+							overlaps[column_i] = (overlap < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap;
 						}
-						const int overlap_int = _mm512_reduce_add_epi32(overlap_epi16);
-						overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
 					}
 
-					#if _DEBUG
-					std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-					priv::calc_overlap::calc_overlap_ref(layer, param, sensor_activity, overlaps_ref);
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					__m512i get_sensors_epi32(
+						const __mmask16 mask,
+						const __m512i origin,
+						const void * active_sensors_ptr)
 					{
-						const int overlap_ref = overlaps_ref[column_i];
-						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512_small_epi32:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						const __m512i int_addr = _mm512_srli_epi32(origin, 5);
+						const __m512i pos_in_int = _mm512_and_epi32(origin, _mm512_set1_epi32(0b11111));
+						const __m512i sensor_int = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr, active_sensors_ptr, 4);
+						const __m512i sensors = _mm512_srlv_epi32(sensor_int, pos_in_int);
+						return _mm512_and_epi32(sensors, _mm512_set1_epi32(1));
 					}
-					#endif
-				}
-				// not much faster than calc_overlap_avx512_small_epi32
-				template <typename P>
-				void calc_overlap_avx512_small_epi16(
-					const Layer<P>& layer,
-					const Dynamic_Param& param,
-					const Layer<P>::Active_Sensors& active_sensors,
-					//out 
-					std::vector<int>& overlaps)
-				{
-					assert_msg(P::N_VISIBLE_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
-					const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
-					const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
-
-					std::array<int, 16> t = { 0 };
-					for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
+					__m512i get_sensors_epi32(
+						const __mmask16 mask,
+						const __m512i origin_epi32,
+						const __m512i active_sensors)
 					{
-						t[i] = active_sensors._data[i];
+						const __m512i int_addr = _mm512_srli_epi32(origin_epi32, 5);
+						const __m512i pos_in_int = _mm512_and_epi32(origin_epi32, _mm512_set1_epi32(0b11111));
+						const __m512i sensor_int = _mm512_mask_permutexvar_epi32(_mm512_setzero_epi32(), mask, int_addr, active_sensors);
+						const __m512i sensors = _mm512_srlv_epi32(sensor_int, pos_in_int);
+						return _mm512_and_epi32(sensors, _mm512_set1_epi32(1));
 					}
-					const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
 
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					__m512i get_sensors_epi16(
+						const __mmask32 mask,
+						const __m512i origin_epi32,
+						const __m512i active_sensors)
 					{
-						const auto& column = layer[column_i];
-						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
-						auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
+						const __m512i short_addr = _mm512_srli_epi16(origin_epi32, 4);
+						const __m512i pos_in_int = _mm512_and_si512(origin_epi32, _mm512_set1_epi16(0b1111));
+						const __m512i sensor_int = _mm512_mask_permutexvar_epi16(_mm512_setzero_epi32(), mask, short_addr, active_sensors);
+						const __m512i sensors = _mm512_srlv_epi16(sensor_int, pos_in_int);
+						return _mm512_and_si512(sensors, _mm512_set1_epi16(1));
+					}
 
-						__m512i overlap_epu16_AB = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
-						__m512i overlap_epu16_CD = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
+					template <typename P>
+					void calc_overlap_gather_avx512(
+						const Layer<P>& layer,
+						const Dynamic_Param& param,
+						const Layer<P>::Active_Sensors& active_sensors,
+						//out 
+						std::vector<int>& overlaps) //size = P::N_COLUMNS
+					{
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
+						auto active_sensors_ptr = active_sensors.data();
+						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
-						for (int block = 0; block < n_blocks; ++block)
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+							const auto& column = layer[column_i];
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
 
-							const __mmask32 mask_32_A = static_cast<__mmask32>(connected_mask_64 >> (0 * 32));
-							const __m512i origin_epi32_A = origin_epi32_ptr[(block * 4) + 0];
-							const __m512i origin_epi32_B = origin_epi32_ptr[(block * 4) + 1];
-							const __m512i origin_epu16_A = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_A));
-							const __m512i origin_epu16_B = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_B));
-							const __m512i origin_epu16_AB = _mm512_shuffle_i64x2(origin_epu16_A, origin_epu16_B, 0b01000100);
-							overlap_epu16_AB = _mm512_adds_epu16(overlap_epu16_AB, get_sensors_epi16(mask_32_A, origin_epu16_AB, active_sensors_simd));
+							__m512i overlap = _mm512_setzero_epi32();
 
-							const __mmask32 mask_32_B = static_cast<__mmask32>(connected_mask_64 >> (1 * 32));
-							const __m512i origin_epi32_C = origin_epi32_ptr[(block * 4) + 2];
-							const __m512i origin_epi32_D = origin_epi32_ptr[(block * 4) + 3];
-							const __m512i origin_epu16_C = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_C));
-							const __m512i origin_epu16_D = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_D));
-							const __m512i origin_epu16_CD = _mm512_shuffle_i64x2(origin_epu16_C, origin_epu16_D, 0b01000100);
-							overlap_epu16_CD = _mm512_adds_epu16(overlap_epu16_CD, get_sensors_epi16(mask_32_B, origin_epu16_CD, active_sensors_simd));
+							for (int block = 0; block < n_blocks; ++block)
+							{
+								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+								for (int i = 0; i < 4; ++i)
+								{
+									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
+									if (mask_16 != 0) overlap = _mm512_add_epi32(overlap, get_sensors_epi32(mask_16, origin_epi32_ptr[(block * 4) + i], active_sensors_ptr));
+								}
+							}
+							const int overlap_int = _mm512_reduce_add_epi32(overlap);
+							overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
+
+							if (false) log_INFO_DEBUG("SP:calc_overlap_avx512: column ", column.id, " has overlap = ", overlaps[column_i], ".\n");
 						}
-						const __m512i overlap_epu16 = _mm512_adds_epu16(overlap_epu16_AB, overlap_epu16_CD);
-						const __m512i overlap_epi32 = _mm512_add_epi32(_mm512_and_epi32(overlap_epu16, _mm512_set1_epi32(0xFFFF)), _mm512_srli_epi32(overlap_epu16, 16));
-						const int overlap_int = _mm512_reduce_add_epi32(overlap_epi32);
-
-						overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
+						#if _DEBUG
+						std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
+						priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							const int overlap_ref = overlaps_ref[column_i];
+							const int overlap_avx512 = overlaps[column_i];
+							if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						}
+						#endif
 					}
 
-					#if _DEBUG
-					std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-					priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					//P::N_SENSORS < 512
+					template <typename P>
+					void calc_overlap_avx512_gather_small_epi32(
+						const Layer<P>& layer,
+						const Dynamic_Param& param,
+						const Layer<P>::Active_Sensors& active_sensors,
+						//out 
+						std::vector<int>& overlaps)
 					{
-						const int overlap_ref = overlaps_ref[column_i];
-						const int overlap_avx512 = overlaps[column_i];
-						if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512_small_epi16:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						assert_msg(P::N_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
+
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
+						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
+
+						std::array<int, 16> t = { 0 };
+						for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
+						{
+							t[i] = active_sensors._data[i];
+						}
+						const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
+
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							const auto& column = layer[column_i];
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
+
+							__m512i overlap_epi16 = _mm512_setzero_epi32();
+
+							for (int block = 0; block < n_blocks; ++block)
+							{
+								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+								for (int i = 0; i < 4; ++i)
+								{
+									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
+									//if (mask_16 != 0) // slower with this check
+									{
+										overlap_epi16 = _mm512_add_epi32(overlap_epi16, get_sensors_epi32(mask_16, origin_epi32_ptr[(block * 4) + i], active_sensors_simd));
+									}
+								}
+							}
+							const int overlap_int = _mm512_reduce_add_epi32(overlap_epi16);
+							overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
+						}
+
+						#if _DEBUG
+						std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
+						priv::calc_overlap::calc_overlap_ref(layer, param, sensor_activity, overlaps_ref);
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							const int overlap_ref = overlaps_ref[column_i];
+							const int overlap_avx512 = overlaps[column_i];
+							if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512_small_epi32:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						}
+						#endif
 					}
-					#endif
+					// not much faster than calc_overlap_avx512_small_epi32
+					template <typename P>
+					void calc_overlap_avx512_gather_small_epi16(
+						const Layer<P>& layer,
+						const Dynamic_Param& param,
+						const Layer<P>::Active_Sensors& active_sensors,
+						//out 
+						std::vector<int>& overlaps)
+					{
+						assert_msg(P::N_VISIBLE_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
+
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_CONNECTED_THRESHOLD);
+						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
+
+						std::array<int, 16> t = { 0 };
+						for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
+						{
+							t[i] = active_sensors._data[i];
+						}
+						const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
+
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							const auto& column = layer[column_i];
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_permanence.data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(column.pd_synapse_origin.data());
+
+							__m512i overlap_epu16_AB = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
+							__m512i overlap_epu16_CD = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
+
+							for (int block = 0; block < n_blocks; ++block)
+							{
+								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+
+								const __mmask32 mask_32_A = static_cast<__mmask32>(connected_mask_64 >> (0 * 32));
+								const __m512i origin_epi32_A = origin_epi32_ptr[(block * 4) + 0];
+								const __m512i origin_epi32_B = origin_epi32_ptr[(block * 4) + 1];
+								const __m512i origin_epu16_A = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_A));
+								const __m512i origin_epu16_B = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_B));
+								const __m512i origin_epu16_AB = _mm512_shuffle_i64x2(origin_epu16_A, origin_epu16_B, 0b01000100);
+								overlap_epu16_AB = _mm512_adds_epu16(overlap_epu16_AB, get_sensors_epi16(mask_32_A, origin_epu16_AB, active_sensors_simd));
+
+								const __mmask32 mask_32_B = static_cast<__mmask32>(connected_mask_64 >> (1 * 32));
+								const __m512i origin_epi32_C = origin_epi32_ptr[(block * 4) + 2];
+								const __m512i origin_epi32_D = origin_epi32_ptr[(block * 4) + 3];
+								const __m512i origin_epu16_C = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_C));
+								const __m512i origin_epu16_D = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_D));
+								const __m512i origin_epu16_CD = _mm512_shuffle_i64x2(origin_epu16_C, origin_epu16_D, 0b01000100);
+								overlap_epu16_CD = _mm512_adds_epu16(overlap_epu16_CD, get_sensors_epi16(mask_32_B, origin_epu16_CD, active_sensors_simd));
+							}
+							const __m512i overlap_epu16 = _mm512_adds_epu16(overlap_epu16_AB, overlap_epu16_CD);
+							const __m512i overlap_epi32 = _mm512_add_epi32(_mm512_and_epi32(overlap_epu16, _mm512_set1_epi32(0xFFFF)), _mm512_srli_epi32(overlap_epu16, 16));
+							const int overlap_int = _mm512_reduce_add_epi32(overlap_epi32);
+
+							overlaps[column_i] = (overlap_int < P::SP_STIMULUS_THRESHOLD) ? 0 : overlap_int;
+						}
+
+						#if _DEBUG
+						std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
+						priv::calc_overlap::calc_overlap_ref(layer, param, active_sensors, overlaps_ref);
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							const int overlap_ref = overlaps_ref[column_i];
+							const int overlap_avx512 = overlaps[column_i];
+							if (overlap_ref != overlap_avx512) log_ERROR("SP:calc_overlap_avx512_small_epi16:: UNEQUAL: column ", column_i, "; overlap ref ", overlap_ref, " != avx512 ", overlap_avx512, ".\n");
+						}
+						#endif
+					}
 				}
 
 				template <typename P>
@@ -483,23 +486,8 @@ namespace htm
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
-					if (SP_GATHER)
-					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_ref(layer, param, active_sensors, overlaps);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512)
-							if (P::N_VISIBLE_SENSORS < 512)
-							{
-								calc_overlap_avx512_small_epi16(layer, param, active_sensors, overlaps);
-								//calc_overlap_avx512_small_epi32(layer, param, sensor_activity, overlaps);
-							}
-							else
-								calc_overlap_avx512(layer, param, active_sensors, overlaps);
-					}
-					else
-					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_scatter(layer, param, active_sensors, overlaps);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) calc_overlap_scatter(layer, param, active_sensors, overlaps);
-					}
+					if (architecture_switch(P::ARCH) == arch_t::X64) calc_overlap_scatter_ref(layer, param, active_sensors, overlaps);
+					if (architecture_switch(P::ARCH) == arch_t::AVX512) calc_overlap_scatter_ref(layer, param, active_sensors, overlaps);
 				}
 			}
 
@@ -519,7 +507,7 @@ namespace htm
 				}
 
 				template <typename P>
-				void update_synapses_ref(
+				void update_synapses_gather_ref(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
 					const Layer<P>::Active_Columns& active_columns,
@@ -546,7 +534,7 @@ namespace htm
 				}
 
 				template <typename P>
-				void update_synapses_scatter(
+				void update_synapses_ref(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
 					const Layer<P>::Active_Columns& active_columns,
@@ -575,39 +563,64 @@ namespace htm
 				}
 
 				template <typename P>
+				void update_synapses_avx512(
+					Layer<P>& layer,
+					const Dynamic_Param& param,
+					const Layer<P>::Active_Columns& active_columns,
+					const Layer<P>::Active_Sensors& active_sensors)
+				{
+					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+					{
+						auto permanence_epi8_ptr = reinterpret_cast<__m128i *>(layer.sp_pd_synapse_permanence[sensor_i].data());
+						auto destination_columns_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_destination_column[sensor_i].data());
+						auto active_columns_ptr = active_columns.data();
+
+						const __m128i inc_epi8 = _mm_set1_epi8(active_sensors.get(sensor_i) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC);
+
+						const int n_blocks = tools::n_blocks_16(layer.sp_pd_destination_column[sensor_i].size());
+						for (int block = 0; block < n_blocks; ++block)
+						{
+							{
+								const __m512i column_epi32 = destination_columns_epi32_ptr[block];
+
+								const __m512i int_addr = _mm512_srli_epi32(column_epi32, 2);
+								const __m512i sensor_int = _mm512_i32gather_epi32(int_addr, active_columns_ptr, 4);
+								const __m512i byte_pos_in_int = _mm512_and_epi32(column_epi32, _mm512_set1_epi32(0b11));
+								const __m512i bit_mask = _mm512_sllv_epi32(_mm512_set1_epi32(1), byte_pos_in_int);
+								const __mmask16 mask_16 = _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, bit_mask), bit_mask);
+
+								const __m128i old_permanence = permanence_epi8_ptr[block];
+								permanence_epi8_ptr[block] = _mm_mask_adds_epu8(old_permanence, mask_16, old_permanence, inc_epi8);
+							}
+						}
+					}
+				}
+				template <typename P>
 				void d(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
 					const Layer<P>::Active_Columns& active_columns,
 					const Layer<P>::Active_Sensors& active_sensors)
 				{
-					if (SP_GATHER)
-					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, active_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_ref(layer, param, active_columns, active_sensors);
-					}
-					else
-					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_scatter(layer, param, active_columns, active_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_scatter(layer, param, active_columns, active_sensors);
-					}
+					if (architecture_switch(P::ARCH) == arch_t::X64) update_synapses_ref(layer, param, active_columns, active_sensors);
+					if (architecture_switch(P::ARCH) == arch_t::AVX512) update_synapses_avx512(layer, param, active_columns, active_sensors);
 				}
 			}
 
-		/* 
-			Updates the duty cycles for each column. The OVERLAP duty cycle is a moving
-			average of the number of inputs which overlapped with the each column. The
-			ACTIVITY duty cycles is a moving average of the frequency of activation for
-			each column.
+			/*
+				Updates the duty cycles for each column. The OVERLAP duty cycle is a moving
+				average of the number of inputs which overlapped with the each column. The
+				ACTIVITY duty cycles is a moving average of the frequency of activation for
+				each column.
 
-			overlap: An int vector containing the overlap score for each column.
-			The overlap score for a column is defined as the number
-			of synapses in a "connected state" (connected synapses)
-			that are connected to input bits which are turned on.
+				overlap: An int vector containing the overlap score for each column.
+				The overlap score for a column is defined as the number
+				of synapses in a "connected state" (connected synapses)
+				that are connected to input bits which are turned on.
 
-			active_columns. An bit array containing the the active columns,
-			the set of columns which survived inhibition
-		*/
+				active_columns. An bit array containing the the active columns,
+				the set of columns which survived inhibition
+			*/
 			template <typename P>
 			void update_duty_cycles(
 				Layer<P>& layer,
@@ -617,8 +630,8 @@ namespace htm
 			{
 				//Checked: 20-09-17
 				const int period = (P::SP_DUTY_CYCLE_PERIOD > layer.iteration_num) ? layer.iteration_num : P::SP_DUTY_CYCLE_PERIOD;
-				layer.overlap_duty_cycles[column_i] = ((layer.overlap_duty_cycles[column_i] * (period - 1) + ((overlap > 0) ? 1 : 0)) / period);
-				layer.active_duty_cycles[column_i] = ((layer.active_duty_cycles[column_i] * (period - 1) + ((active_column) ? 1 : 0)) / period);
+				layer.sp_overlap_duty_cycles[column_i] = ((layer.sp_overlap_duty_cycles[column_i] * (period - 1) + ((overlap > 0) ? 1 : 0)) / period);
+				layer.sp_active_duty_cycles[column_i] = ((layer.sp_active_duty_cycles[column_i] * (period - 1) + ((active_column) ? 1 : 0)) / period);
 			}
 
 			template <typename P>
@@ -643,13 +656,13 @@ namespace htm
 				}
 				else
 				{
-				/*
-					UInt inhibitionArea = pow((Real) (2 * inhibitionRadius_ + 1), (Real) columnDimensions_.size());
-					inhibitionArea = min(inhibitionArea, numColumns_);
-					targetDensity = ((Real) numActiveColumnsPerInhArea_) / inhibitionArea;
-					targetDensity = min(targetDensity, (Real) 0.5);
-					boostFactors_[i] = exp((targetDensity - activeDutyCycles_[i]) * boostStrength_);
-				*/
+					/*
+						UInt inhibitionArea = pow((Real) (2 * inhibitionRadius_ + 1), (Real) columnDimensions_.size());
+						inhibitionArea = min(inhibitionArea, numColumns_);
+						targetDensity = ((Real) numActiveColumnsPerInhArea_) / inhibitionArea;
+						targetDensity = min(targetDensity, (Real) 0.5);
+						boostFactors_[i] = exp((targetDensity - activeDutyCycles_[i]) * boostStrength_);
+					*/
 				}
 			}
 
@@ -659,22 +672,24 @@ namespace htm
 			//permanence values for such columns are increased.
 			template <typename P>
 			void bump_up_weak_columns(
-				Column<P>& column,
+				Layer<P>& layer,
+				const int column_i,
 				const Dynamic_Param& param,
 				const float overlap_duty_cycle,
 				const float min_overlap_duty_cycle)
 			{
-				if (false) log_INFO("SP:bump_up_weak_columns: column ", column.id, "; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
+				if (false) log_INFO("SP:bump_up_weak_columns: column ", column_i, "; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
 
 				if (overlap_duty_cycle < min_overlap_duty_cycle) // the provided column is a weak column
 				{
-					if (false) log_INFO("SP:bump_up_weak_columns: column ", column.id, " is bumped up; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
+					if (false) log_INFO("SP:bump_up_weak_columns: column ", column_i, " is bumped up; overlap_duty_cycle = ", overlap_duty_cycle, "; min_overlap_duty_cycle = ", min_overlap_duty_cycle, ".\n");
 
-					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+					auto& permanance = layer.sp_pd_synapse_permanence[column_i];
+					for (auto synapse_i = 0; synapse_i < permanance.size(); ++synapse_i)
 					{
-						if (column.pd_synapse_permanence[synapse_i] < param.SP_PD_CONNECTED_THRESHOLD)
+						if (permanance[synapse_i] < param.SP_PD_CONNECTED_THRESHOLD)
 						{
-							column.pd_synapse_permanence[synapse_i] += param.SP_PD_PERMANENCE_INC_WEAK;
+							permanance[synapse_i] += param.SP_PD_PERMANENCE_INC_WEAK;
 						}
 					}
 				}
@@ -701,19 +716,19 @@ namespace htm
 				const int column_i)
 			{
 				if (P::SP_GLOBAL_INHIBITION)
-				{	
+				{
 					//Real maxOverlapDutyCycles = *max_element(overlapDutyCycles_.begin(), overlapDutyCycles_.end());
 					//fill(minOverlapDutyCycles_.begin(), minOverlapDutyCycles_.end(), minPctOverlapDutyCycles_ * maxOverlapDutyCycles);
 
 					if (column_i == 0)
 					{
-						const float max_overlap_duty_cycles = max(layer.overlap_duty_cycles);
-						layer.min_overlap_duty_cycles[column_i] = P::SP_MIN_PCT_OVERLAP_DUTY_CYCLES * max_overlap_duty_cycles;
-						if (false) log_INFO_DEBUG("SP:update_min_duty_cycles: min_overlap_duty_cycles of column ", column_i, " = ", layer.min_overlap_duty_cycles[column_i], ".");
+						const float max_overlap_duty_cycles = max(layer.sp_overlap_duty_cycles);
+						layer.sp_min_overlap_duty_cycles[column_i] = P::SP_MIN_PCT_OVERLAP_DUTY_CYCLES * max_overlap_duty_cycles;
+						if (false) log_INFO_DEBUG("SP:update_min_duty_cycles: min_overlap_duty_cycles of column ", column_i, " = ", layer.sp_min_overlap_duty_cycles[column_i], ".");
 					}
 					else
 					{
-						layer.min_overlap_duty_cycles[column_i] = layer.min_overlap_duty_cycles[0];
+						layer.sp_min_overlap_duty_cycles[column_i] = layer.sp_min_overlap_duty_cycles[0];
 					}
 				}
 				else
@@ -775,11 +790,11 @@ namespace htm
 					{
 						auto& column = layer[column_i];
 						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns.get(column_i));
-						priv::update_boost_factors(layer, column, param, layer.active_duty_cycles[column_i]);
+						priv::update_boost_factors(layer, column, param, layer.sp_active_duty_cycles[column_i]);
 
 						if (false)
 						{
-							priv::bump_up_weak_columns(column, param, layer.overlap_duty_cycles[column_i], layer.min_overlap_duty_cycles[column_i]);
+							priv::bump_up_weak_columns(layer, column_i, param, layer.sp_overlap_duty_cycles[column_i], layer.sp_min_overlap_duty_cycles[column_i]);
 							if (priv::is_update_round(layer))
 							{
 								priv::update_inhibition_radius(layer, column);
@@ -791,7 +806,7 @@ namespace htm
 					//TODO: 2] increase permanence if input overlap is small
 				}
 			}
-			
+
 			#if _DEBUG
 			if (false) log_INFO("SP:compute_sp: active columns OUT:", print::print_bitset(active_columns));
 			#endif

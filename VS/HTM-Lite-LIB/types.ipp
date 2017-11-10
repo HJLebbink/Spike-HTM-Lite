@@ -624,12 +624,6 @@ namespace htm
 			//Current boost factor.
 			float boost_factor = 1.0;
 
-			//Proximal dendrite synapse permanence.
-			std::vector<Permanence> pd_synapse_permanence = std::vector<Permanence>(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD);
-
-			//Proximal dendrite synapse origin cell ID.
-			std::vector<int> pd_synapse_origin = std::vector<int>(P::SP_N_PD_SYNAPSES, P::SP_PD_SYNAPSE_ORIGIN_INVALID);
-
 			//Number of segments this column currently has in use.
 			int dd_segment_count = 0;
 
@@ -656,7 +650,6 @@ namespace htm
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
 			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
 			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
-
 			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
 			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
 
@@ -678,20 +671,20 @@ namespace htm
 			//Number of iterations while learning.
 			int iteration_learn_num = 0;
 
+			//Proximal dendrite synapse origin cell ID.
+			std::vector<std::vector<int>> sp_pd_destination_column = std::vector<std::vector<int>>(P::N_SENSORS);
+
+			//Proximal dendrite synapse permanence.
+			std::vector<std::vector<Permanence, priv::Allocator>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence, priv::Allocator>>(P::N_SENSORS);
+
 			//moving average denoting the frequency of column activation: used by boosting
-			std::vector<float> active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+			std::vector<float> sp_active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
 
 			//moving average denoting the frequency of the column's overlap value being at least equal to the proximal segment activation threshold
-			std::vector<float> overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
-			std::vector<float> min_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+			std::vector<float> sp_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+			std::vector<float> sp_min_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
 
-			//scatter tests:
-			mutable std::vector<std::vector<int>> sp_pd_destination_column = std::vector<std::vector<int>>(P::N_VISIBLE_SENSORS);
-			mutable std::vector<std::vector<Permanence>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence>>(P::N_VISIBLE_SENSORS);
-
-			mutable std::vector<std::vector<int>> sp_pd_origin_sensor = std::vector<std::vector<int>>(P::N_COLUMNS);
 			#pragma endregion
-
 
 			#pragma region Used by TP only
 			Active_Sensors active_sensors;
@@ -759,7 +752,7 @@ namespace htm
 		{
 			out._data = in._data;
 		}
-		
+
 		template <int SIZE>
 		void copy(Bitset_Compact<SIZE>& out, const Bitset_Compact<SIZE>& in)
 		{
@@ -781,7 +774,7 @@ namespace htm
 		{
 			out._data = in._data;
 		}
-		
+
 		template <int SIZE>
 		void copy(Bitset_Sparse<SIZE>& out, const Bitset_Sparse<SIZE>& in)
 		{
