@@ -569,6 +569,24 @@ namespace htm
 					const Layer<P>::Active_Columns& active_columns,
 					const Layer<P>::Active_Sensors& active_sensors)
 				{
+					#if _DEBUG
+					using vector_type = std::vector<Permanence, types::priv::Allocator>;
+					auto permanence_org = std::vector<vector_type>(P::N_SENSORS);
+					auto permanence_ref = std::vector<vector_type>(P::N_SENSORS);
+
+					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+					{
+						permanence_org.push_back(vector_type(layer.sp_pd_synapse_permanence[sensor_i]));
+					}
+					update_synapses_ref(layer, param, active_columns, active_sensors);
+
+					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+					{
+						permanence_ref[sensor_i] = layer.sp_pd_synapse_permanence[sensor_i];
+						layer.sp_pd_synapse_permanence[sensor_i] = permanence_org[sensor_i];
+					}
+					#endif
+						
 					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 					{
 						auto permanence_epi8_ptr = reinterpret_cast<__m128i *>(layer.sp_pd_synapse_permanence[sensor_i].data());
@@ -580,21 +598,35 @@ namespace htm
 						const int n_blocks = tools::n_blocks_16(layer.sp_pd_destination_column[sensor_i].size());
 						for (int block = 0; block < n_blocks; ++block)
 						{
+							const __m512i column_epi32 = destination_columns_epi32_ptr[block];
+
+							const __m512i int_addr = _mm512_srli_epi32(column_epi32, 2);
+							const __m512i sensor_int = _mm512_i32gather_epi32(int_addr, active_columns_ptr, 4);
+							const __m512i byte_pos_in_int = _mm512_and_epi32(column_epi32, _mm512_set1_epi32(0b11));
+							const __m512i bit_mask = _mm512_sllv_epi32(_mm512_set1_epi32(1), byte_pos_in_int);
+							const __mmask16 mask_16 = _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, bit_mask), bit_mask);
+
+							const __m128i old_permanence = permanence_epi8_ptr[block];
+							permanence_epi8_ptr[block] = _mm_mask_adds_epu8(old_permanence, mask_16, old_permanence, inc_epi8);
+						}
+					}
+
+					#if _DEBUG
+					for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+					{
+						const auto& ref = permanence_ref[sensor_i];
+						const auto& org = permanence_org[sensor_i];
+						for (auto synapse_i = 0; synapse_i < ref.size(); synapse_i++)
+						{
+							if (ref[synapse_i] != org[synapse_i])
 							{
-								const __m512i column_epi32 = destination_columns_epi32_ptr[block];
-
-								const __m512i int_addr = _mm512_srli_epi32(column_epi32, 2);
-								const __m512i sensor_int = _mm512_i32gather_epi32(int_addr, active_columns_ptr, 4);
-								const __m512i byte_pos_in_int = _mm512_and_epi32(column_epi32, _mm512_set1_epi32(0b11));
-								const __m512i bit_mask = _mm512_sllv_epi32(_mm512_set1_epi32(1), byte_pos_in_int);
-								const __mmask16 mask_16 = _mm512_cmpeq_epi32_mask(_mm512_and_epi32(sensor_int, bit_mask), bit_mask);
-
-								const __m128i old_permanence = permanence_epi8_ptr[block];
-								permanence_epi8_ptr[block] = _mm_mask_adds_epu8(old_permanence, mask_16, old_permanence, inc_epi8);
+								log_ERROR("TP:update_synapses_avx512:: UNEQUAL permanence for synapse_i ", synapse_i, ": ref ", static_cast<int>(ref[synapse_i]), "; avx512 ", static_cast<int>(org[synapse_i]));
 							}
 						}
 					}
+					#endif
 				}
+
 				template <typename P>
 				void d(
 					Layer<P>& layer,

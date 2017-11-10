@@ -44,52 +44,69 @@ namespace htm
 		//HTM layer private methods
 		namespace priv
 		{
-			//return the number of times a sensor is predicteed.
-			// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
-			template <typename P>
-			void get_predicted_sensors(
-				const Layer<P>& layer,
-				const int sensor_threshold,
-				const Dynamic_Param& param,
-				//out
-				Layer<P>::Active_Visible_Sensors& predicted_sensor)
+			namespace get_predicted_sensors
 			{
-				std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
-
-				Layer<P>::Active_Columns predicted_columns;
-
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+				//return the number of times a sensor is predicteed.
+				// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
+				template <typename P>
+				void get_predicted_sensors_ref(
+					const Layer<P>& layer,
+					const int sensor_threshold,
+					const Dynamic_Param& param,
+					//out
+					Layer<P>::Active_Visible_Sensors& predicted_sensor)
 				{
-					const auto& column = layer[column_i];
-					predicted_columns.set(column_i, column.active_dd_segments.any_current());
-				}
+					std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
-				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-				{
-					int sensor_activity = 0;
+					Layer<P>::Active_Columns predicted_columns;
 
-					const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
-					const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
-
-					for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+						const auto& column = layer[column_i];
+						predicted_columns.set(column_i, column.active_dd_segments.any_current());
+					}
+
+					for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+					{
+						int sensor_activity = 0;
+
+						const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
+						const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
+
+						for (auto synapse_i = 0; synapse_i < permanence.size(); ++synapse_i)
 						{
-							const int column_i = destination_columns[synapse_i];
-							if (predicted_columns.get(column_i))
+							if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
 							{
-								sensor_activity++;
-								if (sensor_activity > sensor_threshold) break;
+								const int column_i = destination_columns[synapse_i];
+								if (predicted_columns.get(column_i))
+								{
+									sensor_activity++;
+									if (sensor_activity > sensor_threshold) break;
+								}
 							}
 						}
+						predicted_sensor_activity[sensor_i] = sensor_activity;
 					}
-					predicted_sensor_activity[sensor_i] = sensor_activity;
-				}
 
-				predicted_sensor.clear_all();
-				for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+					predicted_sensor.clear_all();
+					for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+					{
+						if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
+					}
+				}
+				
+				//return the number of times a sensor is predicteed.
+				// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
+				template <typename P>
+				void d(
+					const Layer<P>& layer,
+					const int sensor_threshold,
+					const Dynamic_Param& param,
+					//out
+					Layer<P>::Active_Visible_Sensors& predicted_sensors)
 				{
-					if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
+					if (architecture_switch(P::ARCH) == arch_t::X64) get_predicted_sensors_ref(layer, sensor_threshold, param, predicted_sensors);
+					if (architecture_switch(P::ARCH) == arch_t::AVX512) get_predicted_sensors_ref(layer, sensor_threshold, param, predicted_sensors);
 				}
 			}
 
@@ -104,7 +121,7 @@ namespace htm
 				Layer<P>::Active_Visible_Sensors predicted_sensors;
 
 				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
-				get_predicted_sensors(layer, sensor_threshold, param, predicted_sensors);
+				get_predicted_sensors::d(layer, sensor_threshold, param, predicted_sensors);
 				encoder::get_active_sensors<P>(t + 1, data, active_sensors);
 
 				int mismatch = 0;
@@ -179,7 +196,7 @@ namespace htm
 					{
 						std::cout << "=====" << std::endl;
 
-						get_predicted_sensors(layer, sensor_threshold, param, active_visible_sensors);
+						get_predicted_sensors::d(layer, sensor_threshold, param, active_visible_sensors);
 						encoder::get_active_sensors<P>(t + 1, data, active_sensors);
 
 						std::cout << "at t = " << t << ": predicted sensor activity at (future) t = " << (t + 1) << ":" << std::endl;

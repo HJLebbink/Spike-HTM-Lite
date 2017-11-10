@@ -80,7 +80,7 @@ inline void test_network()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS_L1 = 4 * 8;
+	const int N_BLOCKS_L1 = 4 * 4 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
 	const int N_SENSORS_DIM1 = 20;
@@ -88,7 +88,7 @@ inline void test_network()
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 	const int HISTORY_L1 = 8;
 
-	const int N_BLOCKS_L2 = 2 * 8;
+	const int N_BLOCKS_L2 = 2* 4 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
 	const int HISTORY_L2 = 8;
@@ -135,7 +135,7 @@ inline void test_network()
 		Dynamic_Param param3(param1);
 
 		const int N_BLOCKS_L3 = 1 * 8;
-		const int N_COLUMNS_L3 = 64 * N_BLOCKS_L2;
+		const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
 		const int N_BITS_CELL_L3 = 4;
 		const int HISTORY_L3 = 8;
 
