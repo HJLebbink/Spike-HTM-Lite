@@ -23,8 +23,8 @@
 #include <algorithm>
 #include <functional>
 
-#include "../Spike-Tools-Lib/log.ipp"
-#include "../Spike-Tools-Lib/assert.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
+#include "..\Spike-Tools-Lib\assert.ipp"
 
 #include "constants.ipp"
 #include "print.ipp"

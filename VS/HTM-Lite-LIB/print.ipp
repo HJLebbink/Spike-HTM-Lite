@@ -221,20 +221,20 @@ namespace htm
 			return result.str();
 		}
 
-		template <int N_SENSORS>
+		template <typename P>
 		std::string print_sensor_activity(
-			const Bitset_Compact<N_SENSORS>& sensor_activity,
+			const Layer<P>::Active_Sensors& sensor_activity,
 			const int width)
 		{
 			int sum = 0;
 			int counter = 0;
 			std::ostringstream result;
 
-			while (counter < N_SENSORS)
+			while (counter < P::N_SENSORS)
 			{
 				for (auto i = 0; i < width; ++i)
 				{
-					if (counter < N_SENSORS)
+					if (counter < P::N_SENSORS)
 					{
 						if (sensor_activity.get(counter))
 						{
@@ -255,8 +255,8 @@ namespace htm
 		}
 
 		template <typename P>
-		std::string print_sensor_activity2(
-			const Layer<P>::Active_Sensors& sensor_activity1,
+		std::string print_visible_sensor_activity2(
+			const Layer<P>::Active_Visible_Sensors& sensor_activity1,
 			const Layer<P>::Active_Sensors& sensor_activity2,
 			const int width)
 		{
@@ -266,24 +266,24 @@ namespace htm
 			auto counter2 = 0;
 			auto counter3 = 0;
 
-			while (counter1 < P::N_SENSORS)
+			while (counter1 < P::N_VISIBLE_SENSORS)
 			{
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter1 < P::N_SENSORS) ? ((sensor_activity1.get(counter1)) ? "X" : ".") : "-");
+					result << ((counter1 < P::N_VISIBLE_SENSORS) ? ((sensor_activity1.get(counter1)) ? "X" : ".") : "-");
 					counter1++;
 				}
 				result << " | ";
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter2 < P::N_SENSORS) ? ((sensor_activity2.get(counter2)) ? "X" : ".") : "-");
+					result << ((counter2 < P::N_VISIBLE_SENSORS) ? ((sensor_activity2.get(counter2)) ? "X" : ".") : "-");
 					counter2++;
 				}
 				result << " | ";
 
 				for (auto i = 0; i < width; ++i)
 				{
-					result << ((counter3 < P::N_SENSORS) ? ((sensor_activity1.get(counter3) == sensor_activity2.get(counter3)) ? "." : "X") : "-");
+					result << ((counter3 < P::N_VISIBLE_SENSORS) ? ((sensor_activity1.get(counter3) == sensor_activity2.get(counter3)) ? "." : "X") : "-");
 					counter3++;
 				}
 				result << "\n";

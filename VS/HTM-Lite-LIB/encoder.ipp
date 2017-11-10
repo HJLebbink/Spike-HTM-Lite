@@ -21,7 +21,7 @@
 #include <iostream>		// std::cout
 #include <fstream>
 
-#include "../Spike-Tools-Lib/log.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
 
 #include "tools.ipp"
 #include "constants.ipp"
@@ -35,11 +35,11 @@ namespace htm
 		using namespace htm::types;
 
 		template <typename P>
-		std::vector<Layer<P>::Active_Sensors> encode_pass_through(
+		std::vector<Layer<P>::Active_Visible_Sensors> encode_pass_through(
 			const std::string& filename,
 			const Dynamic_Param& param)
 		{
-			auto data = std::vector<Layer<P>::Active_Sensors>();
+			auto data = std::vector<Layer<P>::Active_Visible_Sensors>();
 
 			std::ifstream input(filename);
 			if (!input.good())
@@ -54,7 +54,7 @@ namespace htm
 			bool endFile = false;
 			while (!endFile)
 			{
-				Layer<P>::Active_Sensors item;
+				Layer<P>::Active_Visible_Sensors item;
 				auto pos = 0;
 
 				for (auto i1 = 0; i1 < param.n_visible_sensors_dim1; ++i1)
@@ -110,14 +110,14 @@ namespace htm
 		template <typename P>
 		void get_active_sensors(
 			const int t,
-			const std::vector<Layer<P>::Active_Sensors>& data,
+			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 			Layer<P>::Active_Sensors& sensor_activity)
 		{
 			const int time_step_max = static_cast<int>(data.size());
 			const auto i = t % time_step_max;
 			if (false) log_INFO_DEBUG("encoder:fetch_sensor_data: t = ", t, "; time_step_max = ", time_step_max, "; index = ", i, ".\n");
 			
-			copy(sensor_activity, data[i]); // this copy is necessary because we want to add noise later.
+			copy_partial(sensor_activity, data[i]);
 		}
 	}
 }

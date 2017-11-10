@@ -52,7 +52,7 @@ namespace htm
 				const int sensor_threshold,
 				const Dynamic_Param& param,
 				//out
-				Layer<P>::Active_Sensors& predicted_sensor)
+				Layer<P>::Active_Visible_Sensors& predicted_sensor)
 			{
 				std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
@@ -165,17 +165,18 @@ namespace htm
 			int calc_mismatch(
 				const int t,
 				const Dynamic_Param& param,
-				const std::vector<Layer<P>::Active_Sensors>& data,
+				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 				const Layer<P>& layer)
 			{
 				Layer<P>::Active_Sensors active_sensors;
-				Layer<P>::Active_Sensors predicted_sensors;
+				Layer<P>::Active_Visible_Sensors predicted_sensors;
 
 				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
 				get_predicted_sensors(layer, sensor_threshold, param, predicted_sensors);
 				encoder::get_active_sensors<P>(t + 1, data, active_sensors);
 
 				int mismatch = 0;
+				//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
 				for (auto i = 0; i < P::N_VISIBLE_SENSORS; ++i)
 				{
 					if (predicted_sensors.get(i) != active_sensors.get(i)) mismatch++;
@@ -203,7 +204,7 @@ namespace htm
 			void load_inferred_sensor_activity(
 				const Layer<P>& layer,
 				const Dynamic_Param& param,
-				const Bitset<P::N_COLUMNS>& active_columns,
+				const Layer<P>::Active_Columns& active_columns,
 				// out
 				std::vector<int>& inferred_sensor_activity)
 			{
@@ -267,22 +268,22 @@ namespace htm
 				const int t,
 				const Layer<P>& layer,
 				const Dynamic_Param& param,
-				const std::vector<Layer<P>::Active_Sensors>& data,
+				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 				const Layer<P>::Active_Columns& active_columns)
 			{
 				const int progress_frequency = 1;
 				const int sensor_threshold = 1;
-				Layer<P>::Active_Sensors sensor_activity_local1;
-				Layer<P>::Active_Sensors sensor_activity_local2;
+				Layer<P>::Active_Visible_Sensors active_visible_sensors;
+				Layer<P>::Active_Sensors active_sensors;
 
 				if ((t % progress_frequency) == 0)
 				{
-					if (true) //print predicted sensor activity
+					if (true) //print predicted visible sensor activity
 					{
 						std::cout << "=====" << std::endl;
 
-						get_predicted_sensors(layer, sensor_threshold, param, sensor_activity_local1);
-						encoder::get_active_sensors<P>(t + 1, data, sensor_activity_local2);
+						get_predicted_sensors(layer, sensor_threshold, param, active_visible_sensors);
+						encoder::get_active_sensors<P>(t + 1, data, active_sensors);
 
 						std::cout << "at t = " << t << ": predicted sensor activity at (future) t = " << (t + 1) << ":" << std::endl;
 						std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
@@ -291,7 +292,7 @@ namespace htm
 						std::cout << " | ";
 						std::cout << std::setw(param.n_visible_sensors_dim1) << "mismatch";
 						std::cout << std::endl;
-						std::cout << print::print_sensor_activity2<P>(sensor_activity_local1, sensor_activity_local2, param.n_visible_sensors_dim1);
+						std::cout << print::print_visible_sensor_activity2<P>(active_visible_sensors, active_sensors, param.n_visible_sensors_dim1);
 					}
 
 					// print the boost values
@@ -335,15 +336,15 @@ namespace htm
 					layer.winner_cells);
 
 				#if _DEBUG
-				if (true) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))));
-				if (false) log_INFO("layer:run: dd_synapes at t = ", time, ": ", print::print_dd_synapses(layer));
-				if (false) log_INFO("layer:run: pd_synapes at t = ", time, ": ", print::print_pd_synapses(layer));
+				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
+				if (false) log_INFO("layer:run: dd_synapes at t = ", time, ": ", print::print_dd_synapses(layer), "\n");
+				if (false) log_INFO("layer:run: pd_synapes at t = ", time, ": ", print::print_pd_synapses(layer), "\n");
 				#endif
 			}
 			
 			template <bool LEARN, typename P>
 			int run(
-				const std::vector<Layer<P>::Active_Sensors>& data,
+				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 				Layer<P>& layer,
 				const Dynamic_Param& param)
 			{
@@ -438,7 +439,7 @@ namespace htm
 		//Run the provided layer once, update steps as provided in param
 		template <typename P>
 		int run(
-			const std::vector<Layer<P>::Active_Sensors>& data,
+			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
@@ -450,7 +451,7 @@ namespace htm
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P>
 		int run_multiple_times(
-			const std::vector<Layer<P>::Active_Sensors>& data,
+			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{

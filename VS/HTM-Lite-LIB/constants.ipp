@@ -22,8 +22,8 @@
 
 #include <intrin.h>
 
-#include "../Spike-Tools-Lib/log.ipp"
-#include "../Spike-Tools-Lib/random.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
+#include "..\Spike-Tools-Lib\random.ipp"
 
 #include "tools.ipp"
 

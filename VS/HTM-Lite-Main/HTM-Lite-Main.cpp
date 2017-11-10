@@ -17,15 +17,15 @@
 #include <chrono>
 #include <stdio.h>  // for printf
 
-#include "../Spike-Tools-Lib/log.ipp"
-#include "../Spike-Tools-Lib/timing.ipp"
-#include "../Spike-Tools-Lib/profiler.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
+#include "..\Spike-Tools-Lib\timing.ipp"
+#include "..\Spike-Tools-Lib\profiler.ipp"
 
-#include "../HTM-Lite-LIB/constants.ipp"
-#include "../HTM-Lite-LIB/types.ipp"
-#include "../HTM-Lite-LIB/layer.ipp"
-#include "../HTM-Lite-LIB/swarm.ipp"
-#include "../HTM-Lite-LIB/network.ipp"
+#include "..\HTM-Lite-LIB\constants.ipp"
+#include "..\HTM-Lite-LIB\types.ipp"
+#include "..\HTM-Lite-LIB\layer.ipp"
+#include "..\HTM-Lite-LIB\swarm.ipp"
+#include "..\HTM-Lite-LIB\network.ipp"
 
 using namespace htm;
 using namespace htm::types;
@@ -37,25 +37,26 @@ inline void test_layer()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 4 * 8;
+	const int N_BLOCKS = 1 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int N_SENSOR_DIM1 = 20;
-	const int N_SENSOR_DIM2 = 20;
-	const int N_HIDDEN_VISIBLE_SENSORS = 0;
+	const int N_SENSORS_DIM1 = 20;
+	const int N_SENSORS_DIM2 = 20;
+	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	const int N_HIDDEN_SENSORS = 0;
+
+	const int HISTORY = 2;
 	const arch_t ARCH = arch_t::RUNTIME;
-	const int HISTORY_SIZE = 8;
-	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param;
 	param.learn = true;
 	param.n_time_steps = 300;
 	param.n_times = 10;
-	param.n_visible_sensors_dim1 = N_SENSOR_DIM1;
-	param.n_visible_sensors_dim2 = N_SENSOR_DIM2;
+	param.n_visible_sensors_dim1 = N_SENSORS_DIM1;
+	param.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param.progress = true;
+	param.progress = false;
 	param.progress_display_interval = 20;
 
 	param.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -65,7 +66,7 @@ inline void test_layer()
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
 
-	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_VISIBLE_SENSORS, HISTORY_SIZE, ARCH>;
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY, ARCH>;
 	Layer<P> layer;
 	auto data = encoder::encode_pass_through<P>(input_filename, param);
 
@@ -98,12 +99,12 @@ inline void test_network()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 10;
-	param1.n_times = 1;
+	param1.n_time_steps = 300;
+	param1.n_times = 10;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = true;
+	param1.progress = false;
 	param1.progress_display_interval = 20;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -126,7 +127,7 @@ inline void test_network()
 
 	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
 
-	htm::network::run(data, layer1, layer2, param1, param2);
+	htm::network::run_multiple_times(data, layer1, layer2, param1, param2);
 }
 
 inline void test_swarm()

@@ -23,7 +23,7 @@
 #include <sstream>      // std::stringstream
 #include <iomanip>      // std::setw
 
-#include "../Spike-Tools-LIB/assert.ipp"
+#include "..\Spike-Tools-Lib\assert.ipp"
 
 #include "constants.ipp"
 

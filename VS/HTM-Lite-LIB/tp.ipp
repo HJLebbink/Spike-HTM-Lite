@@ -23,9 +23,9 @@
 #include <map>
 #include <set>
 
-#include "../Spike-Tools-Lib/log.ipp"
-#include "../Spike-Tools-Lib/assert.ipp"
-#include "../Spike-Tools-Lib/random.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
+#include "..\Spike-Tools-Lib\assert.ipp"
+#include "..\Spike-Tools-Lib\random.ipp"
 
 #include "constants.ipp"
 #include "print.ipp"

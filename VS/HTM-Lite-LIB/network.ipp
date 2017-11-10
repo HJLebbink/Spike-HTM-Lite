@@ -37,7 +37,79 @@ namespace htm
 		//HTM layer private methods
 		namespace priv
 		{
+			template <typename P1, typename P2>
+			void one_step(
+				Layer<P1>& layer1,
+				Layer<P2>& layer2,
+				const int time,
+				const Dynamic_Param& param1,
+				const Dynamic_Param& param2)
+			{
+				//2] concat previous l2 columns to sensors
+				for (int i = 0; i < P1::N_HIDDEN_SENSORS; ++i)
+				{
+					const int sensor_i = P1::N_VISIBLE_SENSORS + i;
+					layer1.active_sensors.set(sensor_i, layer2.active_columns.get(i));
+				}
 
+				if (false) log_INFO("network:run: active sensors at t = ", time, ":\n", print::print_sensor_activity<P1>(layer1.active_sensors, param1.n_visible_sensors_dim1), "\n");
+
+				// Learn L1
+				if (param1.learn)
+					layer::priv::one_step<true>(layer1.active_sensors, layer1, time, param1);
+				else 
+					layer::priv::one_step<false>(layer1.active_sensors, layer1, time, param1);
+				// Learn L2
+				if (param2.learn) 
+					layer::priv::one_step<true>(layer1.active_columns, layer2, time, param2);
+				else 
+					layer::priv::one_step<false>(layer1.active_columns, layer2, time, param2);
+			}
+
+			template <typename P1, typename P2>
+			int run(
+				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				Layer<P1>& layer1,
+				Layer<P2>& layer2,
+				const Dynamic_Param& param1,
+				const Dynamic_Param& param2)
+			{
+				static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
+
+				int total_mismatch = 0;
+				int mismatch = 0;
+				int current_mismatch = 0;
+
+				for (int time = 0; time < param1.n_time_steps; ++time)
+				{
+					encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
+					layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
+
+					one_step(layer1, layer2, time, param1, param2);
+
+					if (param1.progress_display_interval > 0)
+					{
+						current_mismatch = layer::priv::calc_mismatch(time, param1, data, layer1);
+					}
+					total_mismatch += current_mismatch;
+
+					if (!param1.quiet)
+					{
+						mismatch += current_mismatch;
+
+						if (time == 0) std::cout << "layer:run: total mismatch: ";
+						if (((time % param1.progress_display_interval) == 0) && (time > 0))
+						{
+							const float average_mismatch = static_cast<float>(mismatch) / param1.progress_display_interval;
+							std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+							mismatch = 0;
+						}
+					}
+					if (param1.progress) layer::priv::show_progress(time, layer1, param1, data, layer1.active_columns);
+				}
+				if (!param1.quiet) std::cout << std::endl;
+				return total_mismatch;
+			}
 		}
 
 		template <
@@ -56,34 +128,32 @@ namespace htm
 
 		template <typename P1, typename P2>
 		int run(
-			const std::vector<Layer<P1>::Active_Sensors>& data,
+			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
 			const Dynamic_Param& param1,
 			const Dynamic_Param& param2)
 		{
-			static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
-			const bool LEARN = true;
+			return priv::run(data, layer1, layer2, param1, param2);
+		}
 
-			layer::init(layer1, param1);
-			layer::init(layer2, param2);
-
-			for (int time = 0; time < param1.n_time_steps; ++time)
+		//Run the provided layer a number of times, update steps as provided in param
+		template <typename P1, typename P2>
+		int run_multiple_times(
+			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			Layer<P1>& layer1,
+			Layer<P2>& layer2,
+			const Dynamic_Param& param1,
+			const Dynamic_Param& param2)
+		{
+			int mismatch = 0;
+			for (auto i = 0; i < param1.n_times; ++i)
 			{
-				//1] get active sensors
-				encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
-				layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
-
-				//2] concat previous l2 columns to sensors
-
-
-				// learn L1
-				layer::priv::one_step<LEARN>(layer1.active_sensors, layer1, time, param1);
-				// Learn L2
-				layer::priv::one_step<LEARN>(layer1.active_columns, layer2, time, param2);
+				layer::init(layer1, param1);
+				layer::init(layer2, param2);
+				mismatch += run(data, layer1, layer2, param1, param2);
 			}
-
-			return 0;
+			return mismatch;
 		}
 	}
 }

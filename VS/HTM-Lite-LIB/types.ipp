@@ -652,7 +652,9 @@ namespace htm
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
 			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
 			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
-			using Active_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
+
+			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
+			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
 
 			// default constructor
 			Layer()
@@ -758,6 +760,16 @@ namespace htm
 		void copy(Bitset_Compact<SIZE>& out, const Bitset_Compact<SIZE>& in)
 		{
 			out._data = in._data;
+		}
+
+		template <int SIZE1, int SIZE2>
+		void copy_partial(Bitset_Compact<SIZE1>& out, const Bitset_Compact<SIZE2>& in)
+		{
+			static_assert(SIZE2 <= SIZE1, "ERROR: copy_partial: Bitset in is larger than Bitset out.");
+			for (int i = 0; i < Bitset_Compact<SIZE2>::N_BLOCKS; ++i)
+			{
+				out._data[i] = in._data[i];
+			}
 		}
 
 		template <int SIZE>

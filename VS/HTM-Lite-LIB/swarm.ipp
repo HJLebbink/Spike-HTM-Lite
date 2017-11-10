@@ -26,7 +26,7 @@
 #include <thread>         // std::thread
 #include <algorithm>
 
-#include "../Spike-Tools-Lib/log.ipp"
+#include "..\Spike-Tools-Lib\log.ipp"
 
 #include "constants.ipp"
 #include "types.ipp"
