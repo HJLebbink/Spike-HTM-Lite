@@ -497,7 +497,7 @@ namespace htm
 						if (architecture_switch(P::ARCH) == arch_t::X64) indexed_by_column::calc_overlap_ic_ref(layer, param, active_sensors, overlaps);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512)
 						{
-							if (P::N_SENSORS <= 512)
+							if (P::N_SENSORS < 512)
 							{
 								indexed_by_column::calc_overlap_avx512_ic_small_epi16(layer, param, active_sensors, overlaps);
 								//indexed_by_column::calc_overlap_avx512_ic_small_epi32(layer, param, active_sensors, overlaps);

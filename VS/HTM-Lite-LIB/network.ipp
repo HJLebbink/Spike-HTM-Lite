@@ -39,11 +39,10 @@ namespace htm
 		{
 			template <typename P1, typename P2>
 			void one_step(
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
+				const std::array<Dynamic_Param, 2>& param,
 				const int time,
-				const Dynamic_Param& param1,
-				const Dynamic_Param& param2)
+				Layer<P1>& layer1,
+				Layer<P2>& layer2)
 			{
 				static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
 				{
@@ -52,28 +51,26 @@ namespace htm
 					{
 						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param1.n_visible_sensors_dim1), "\n");
-					layer::one_step(layer1.active_sensors, layer1, time, param1);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
 				}
 				{
 					for (int i = 0; i < P2::N_HIDDEN_SENSORS; ++i)
 					{
 						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer1.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param2.n_visible_sensors_dim1), "\n");
-					layer::one_step(layer2.active_sensors, layer2, time, param2);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
 				}
 			}
 
 			template <typename P1, typename P2, typename P3>
 			void one_step(
+				const std::array<Dynamic_Param, 3>& param, 
+				const int time,
 				Layer<P1>& layer1,
 				Layer<P2>& layer2,
-				Layer<P3>& layer3,
-				const int time,
-				const Dynamic_Param& param1,
-				const Dynamic_Param& param2,
-				const Dynamic_Param& param3)
+				Layer<P3>& layer3)
 			{
 				//static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
 				{
@@ -82,8 +79,8 @@ namespace htm
 					{
 						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param1.n_visible_sensors_dim1), "\n");
-					layer::one_step(layer1.active_sensors, layer1, time, param1);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
 				}
 				{
 					//Previous layer 1 columns become visible sensors in layer 2
@@ -96,8 +93,8 @@ namespace htm
 					{
 						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer3.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param2.n_visible_sensors_dim1), "\n");
-					layer::one_step(layer2.active_sensors, layer2, time, param2);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
 				}
 				{
 					//Previous layer 2 columns become hidden sensors in layer 3
@@ -105,99 +102,9 @@ namespace htm
 					{
 						layer3.active_sensors.set(i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_sensor_activity<P3>(layer3.active_sensors, param3.n_visible_sensors_dim1), "\n");
-					layer::one_step(layer3.active_sensors, layer3, time, param3);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_sensor_activity<P3>(layer3.active_sensors, param[2].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer3.active_sensors, layer3, time, param[2]);
 				}
-			}
-
-			template <typename P1, typename P2>
-			int run(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
-				const Dynamic_Param& param1,
-				const Dynamic_Param& param2)
-			{
-				int total_mismatch = 0;
-				int mismatch = 0;
-				int current_mismatch = 0;
-
-				for (int time = 0; time < param1.n_time_steps; ++time)
-				{
-					encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
-					layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
-
-					one_step(layer1, layer2, time, param1, param2);
-
-					if (param1.progress_display_interval > 0)
-					{
-						current_mismatch = layer::priv::calc_mismatch(time, param1, data, layer1);
-					}
-					total_mismatch += current_mismatch;
-
-					if (!param1.quiet)
-					{
-						mismatch += current_mismatch;
-
-						if (time == 0) std::cout << "layer:run: total mismatch: ";
-						if (((time % param1.progress_display_interval) == 0) && (time > 0))
-						{
-							const float average_mismatch = static_cast<float>(mismatch) / param1.progress_display_interval;
-							std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-							mismatch = 0;
-						}
-					}
-					if (param1.progress) layer::priv::show_progress(time, layer1, param1, data, layer1.active_columns);
-				}
-				if (!param1.quiet) std::cout << std::endl;
-				return total_mismatch;
-			}
-
-			template <typename P1, typename P2, typename P3>
-			int run(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
-				Layer<P3>& layer3,
-				const Dynamic_Param& param1,
-				const Dynamic_Param& param2,
-				const Dynamic_Param& param3)
-			{
-				//static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
-
-				int total_mismatch = 0;
-				int mismatch = 0;
-				int current_mismatch = 0;
-
-				for (int time = 0; time < param1.n_time_steps; ++time)
-				{
-					encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
-					layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
-
-					one_step(layer1, layer2, layer3, time, param1, param2, param3);
-
-					if (param1.progress_display_interval > 0)
-					{
-						current_mismatch = layer::priv::calc_mismatch(time, param1, data, layer1);
-					}
-					total_mismatch += current_mismatch;
-
-					if (!param1.quiet)
-					{
-						mismatch += current_mismatch;
-
-						if (time == 0) std::cout << "layer:run: total mismatch: ";
-						if (((time % param1.progress_display_interval) == 0) && (time > 0))
-						{
-							const float average_mismatch = static_cast<float>(mismatch) / param1.progress_display_interval;
-							std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-							mismatch = 0;
-						}
-					}
-					if (param1.progress) layer::priv::show_progress(time, layer1, param1, data, layer1.active_columns);
-				}
-				if (!param1.quiet) std::cout << std::endl;
-				return total_mismatch;
 			}
 		}
 
@@ -243,29 +150,59 @@ namespace htm
 		template <typename P1, typename P2>
 		int run(
 			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
-			Layer<P2>& layer2,
-			const Dynamic_Param& param1,
-			const Dynamic_Param& param2)
+			Layer<P2>& layer2)
 		{
-			return priv::run(data, layer1, layer2, param1, param2);
+			int total_mismatch = 0;
+			int mismatch = 0;
+			int current_mismatch = 0;
+
+			for (int time = 0; time < param[0].n_time_steps; ++time)
+			{
+				encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
+				layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
+
+				priv::one_step(param, time, layer1, layer2);
+
+				if (param[0].progress_display_interval > 0)
+				{
+					current_mismatch = layer::priv::calc_mismatch(time, param[0], data, layer1);
+				}
+				total_mismatch += current_mismatch;
+
+				if (!param[0].quiet)
+				{
+					mismatch += current_mismatch;
+
+					if (time == 0) std::cout << "layer:run: total mismatch: ";
+					if (((time % param[0].progress_display_interval) == 0) && (time > 0))
+					{
+						const float average_mismatch = static_cast<float>(mismatch) / param[0].progress_display_interval;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						mismatch = 0;
+					}
+				}
+				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], data, layer1.active_columns);
+			}
+			if (!param[0].quiet) std::cout << std::endl;
+			return total_mismatch;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2>
 		int run_multiple_times(
 			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
-			Layer<P2>& layer2,
-			const Dynamic_Param& param1,
-			const Dynamic_Param& param2)
+			Layer<P2>& layer2)
 		{
 			int mismatch = 0;
-			for (auto i = 0; i < param1.n_times; ++i)
+			for (auto i = 0; i < param[0].n_times; ++i)
 			{
-				layer::init(layer1, param1);
-				layer::init(layer2, param2);
-				mismatch += run(data, layer1, layer2, param1, param2);
+				layer::init(layer1, param[0]);
+				layer::init(layer2, param[1]);
+				mismatch += run(data, param, layer1, layer2);
 			}
 			return mismatch;
 		}
@@ -273,34 +210,64 @@ namespace htm
 		template <typename P1, typename P2, typename P3>
 		int run(
 			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
-			Layer<P3>& layer3,
-			const Dynamic_Param& param1,
-			const Dynamic_Param& param2,
-			const Dynamic_Param& param3)
+			Layer<P3>& layer3)
 		{
-			return priv::run(data, layer1, layer2, layer3, param1, param2, param3);
+			//static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
+
+			int total_mismatch = 0;
+			int mismatch = 0;
+			int current_mismatch = 0;
+
+			for (int time = 0; time < param[0].n_time_steps; ++time)
+			{
+				encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
+				layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
+
+				priv::one_step(param, time, layer1, layer2, layer3);
+
+				if (param[0].progress_display_interval > 0)
+				{
+					current_mismatch = layer::priv::calc_mismatch(time, param[0], data, layer1);
+				}
+				total_mismatch += current_mismatch;
+
+				if (!param[0].quiet)
+				{
+					mismatch += current_mismatch;
+
+					if (time == 0) std::cout << "layer:run: total mismatch: ";
+					if (((time % param[0].progress_display_interval) == 0) && (time > 0))
+					{
+						const float average_mismatch = static_cast<float>(mismatch) / param[0].progress_display_interval;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						mismatch = 0;
+					}
+				}
+				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], data, layer1.active_columns);
+			}
+			if (!param[0].quiet) std::cout << std::endl;
+			return total_mismatch;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2, typename P3>
 		int run_multiple_times(
 			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
-			Layer<P3>& layer3,
-			const Dynamic_Param& param1,
-			const Dynamic_Param& param2,
-			const Dynamic_Param& param3)
+			Layer<P3>& layer3)
 		{
 			int mismatch = 0;
-			for (auto i = 0; i < param1.n_times; ++i)
+			for (auto i = 0; i < param[0].n_times; ++i)
 			{
-				layer::init(layer1, param1);
-				layer::init(layer2, param2);
-				layer::init(layer3, param3);
-				mismatch += run(data, layer1, layer2, layer3, param1, param2, param3);
+				layer::init(layer1, param[0]);
+				layer::init(layer2, param[1]);
+				layer::init(layer3, param[2]);
+				mismatch += run(data, param, layer1, layer2, layer3);
 			}
 			return mismatch;
 		}

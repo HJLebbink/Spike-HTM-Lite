@@ -129,7 +129,8 @@ inline void test_network()
 		Layer<P2> layer2;
 
 		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
-		htm::network::run_multiple_times(data, layer1, layer2, param1, param2);
+		auto param = std::array<Dynamic_Param, 2>{param1, param2};
+		htm::network::run_multiple_times(data, param, layer1, layer2);
 	}
 	else
 	{
@@ -156,7 +157,8 @@ inline void test_network()
 		Layer<P3> layer3;
 
 		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
-		htm::network::run_multiple_times(data, layer1, layer2, layer3, param1, param2, param3);
+		auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
+		htm::network::run_multiple_times(data, param, layer1, layer2, layer3);
 	}
 }
 
@@ -164,24 +166,29 @@ inline void test_swarm_1layer()
 {
 	// static properties: properties that need to be known at compile time:
 
+	const int N_SENSOR_DIM1 = 20;
+	const int N_SENSOR_DIM2 = 20;
+	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
+	const int N_HIDDEN_SENSORS = 0;
+
+
 	//const int N_BLOCKS = 9; // 1024 columns
 	//const int N_BLOCKS = 4096; // 262144 columns
 	//const int N_BLOCKS = 16384; // 1048576 columns
 	const int N_BLOCKS = 10 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int N_SENSOR_DIM1 = 20;
-	const int N_SENSOR_DIM2 = 20;
-	const int N_HIDDEN_VISIBLE_SENSORS = 0;
-	const arch_t ARCH = arch_t::RUNTIME;
 	const int HISTORY_SIZE = 8;
-	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 
-	Dynamic_Param param;
-	param.learn = true;
-	param.n_time_steps = 1000;
-	param.n_times = 1;
-	param.progress = false;
+	const arch_t ARCH = arch_t::RUNTIME;
+
+	Dynamic_Param param1;
+	param1.learn = true;
+	param1.n_time_steps = 1000;
+	param1.n_times = 1;
+
+	param1.progress = false;
+	param1.quiet = true;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
@@ -202,7 +209,8 @@ inline void test_swarm_1layer()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_VISIBLE_SENSORS, HISTORY_SIZE, ARCH>;
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
+	auto param = std::array<Dynamic_Param, 1>{param1};
 	htm::swarm::run_ga<P>(input_filename, param, options);
 }
 
@@ -213,7 +221,7 @@ inline void test_swarm_2layer()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS_L1 = 1 * 4 * 8;
+	const int N_BLOCKS_L1 = 1 * 2 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
 	const int N_SENSORS_DIM1 = 20;
@@ -221,7 +229,7 @@ inline void test_swarm_2layer()
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 	const int HISTORY_L1 = 8;
 
-	const int N_BLOCKS_L2 = 2 * 4 * 8;
+	const int N_BLOCKS_L2 = 1 * 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
 	const int HISTORY_L2 = 8;
@@ -231,13 +239,13 @@ inline void test_swarm_2layer()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 3000;
+	param1.n_time_steps = 500;
 	param1.n_times = 10;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = true;
-	param1.progress_display_interval = 200;
+	param1.progress = false;
+	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
 	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
@@ -261,41 +269,94 @@ inline void test_swarm_2layer()
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-	if (true)
-	{
-		using Network_Config = network::network_2Layer<
-			N_VISIBLE_SENSORS_L1,
-			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-			ARCH>;
 
-		using P1 = Network_Config::P_L1;
-		using P2 = Network_Config::P_L2;
+	using Network_Config = network::network_2Layer<
+		N_VISIBLE_SENSORS_L1,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		ARCH>;
 
-		htm::swarm::run_ga<P1, P2>(input_filename, param1, param2, options);
-	}
+	using P1 = Network_Config::P_L1;
+	using P2 = Network_Config::P_L2;
+	auto param = std::array<Dynamic_Param, 2>{param1, param2};
+	htm::swarm::run_ga<P1, P2>(input_filename, param, options);
+}
+
+inline void test_swarm_3layer()
+{
+	// static properties: properties that need to be known at compile time:
+
+	const int N_SENSORS_DIM1 = 20;
+	const int N_SENSORS_DIM2 = 20;
+	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+
+	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	const int N_BLOCKS_L1 = 2 * 8;
+	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	const int N_BITS_CELL_L1 = 4;
+	const int HISTORY_L1 = 8;
+
+	const int N_BLOCKS_L2 = 1 * 8;
+	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	const int N_BITS_CELL_L2 = 4;
+	const int HISTORY_L2 = 8;
+
+	const int N_BLOCKS_L3 = 1 * 8;
+	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
+	const int N_BITS_CELL_L3 = 4;
+	const int HISTORY_L3 = 8;
+
+	const arch_t ARCH = arch_t::RUNTIME;
+
+	// dynamic properties: properties that can be changed while the program is running.
+	Dynamic_Param param1;
+	param1.learn = true;
+	param1.n_time_steps = 500;
+	param1.n_times = 10;
+	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
+	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
+
+	param1.progress = false;
+	param1.quiet = true;
+
+	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
+	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
+
+	Dynamic_Param param2(param1);
+	Dynamic_Param param3(param1);
+
+	// Swarm options
+	const std::string outputfilename = "C:/Temp/VS/htm_ga_results.csv";
+	swarm::Swarm_Options options;
+	options.population_size = 100;
+	options.n_epochs = 100;
+	options.mutation_rate = 0.1;
+	options.quiet = false;
+
+	std::ofstream file; // out file stream
+	options.outputfile.open(outputfilename, std::ios::out | std::ios::trunc);
+	if (options.outputfile.good())
+		log_INFO("swarm:run_ga: writing results to file ", outputfilename, "\n");
 	else
-	{
-		Dynamic_Param param3(param1);
+		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-		const int N_BLOCKS_L3 = 1 * 8;
-		const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
-		const int N_BITS_CELL_L3 = 4;
-		const int HISTORY_L3 = 8;
+	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 
-		using Network_Config = network::network_3Layer<
-			N_VISIBLE_SENSORS_L1,
-			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-			N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
-			ARCH>;
+	using Network_Config = network::network_3Layer<
+		N_VISIBLE_SENSORS_L1,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
+		ARCH>;
 
-		using P1 = Network_Config::P_L1;
-		using P2 = Network_Config::P_L2;
-		using P3 = Network_Config::P_L3;
-
-		htm::swarm::run_ga<P1>(input_filename, param1, options);
-	}
+	using P1 = Network_Config::P_L1;
+	using P2 = Network_Config::P_L2;
+	using P3 = Network_Config::P_L3;
+	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
+	htm::swarm::run_ga<P1, P2, P3>(input_filename, param, options);
 }
 
 int main()
@@ -304,7 +365,8 @@ int main()
 	if (false) test_1layer();
 	if (false) test_network();
 	if (false) test_swarm_1layer();
-	if (true) test_swarm_2layer();
+	if (false) test_swarm_2layer();
+	if (true) test_swarm_3layer();
 
 	const auto end_time = std::chrono::system_clock::now();
 
