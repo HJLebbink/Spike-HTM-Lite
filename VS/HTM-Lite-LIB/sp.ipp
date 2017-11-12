@@ -331,7 +331,7 @@ namespace htm
 
 							for (int block = 0; block < n_blocks; ++block)
 							{
-								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8);
 								for (int i = 0; i < 4; ++i)
 								{
 									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
@@ -385,7 +385,7 @@ namespace htm
 
 							for (int block = 0; block < n_blocks; ++block)
 							{
-								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8);
 								for (int i = 0; i < 4; ++i)
 								{
 									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
@@ -441,7 +441,7 @@ namespace htm
 
 							for (int block = 0; block < n_blocks; ++block)
 							{
-								const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8, _MM_CMPINT_NLE);
+								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8_ptr[block], connected_threshold_epi8);
 
 								const __mmask32 mask_32_A = static_cast<__mmask32>(connected_mask_64 >> (0 * 32));
 								const __m512i origin_epi32_A = origin_epi32_ptr[(block * 4) + 0];

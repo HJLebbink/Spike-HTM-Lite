@@ -233,7 +233,7 @@ namespace htm
 						for (int block = 0; block < n_blocks; ++block)
 						{
 							const __m512i old_permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(old_permanence_epi8, connected_threshold_epi8, _MM_CMPINT_NLE);
+							const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(old_permanence_epi8, connected_threshold_epi8);
 							__mmask64 active_cells_mask_64 = 0;
 							{
 								for (int i = 0; i < 4; ++i)
@@ -840,19 +840,18 @@ namespace htm
 						for (int block = 0; block < n_blocks; ++block)
 						{
 							const __m512i permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
-							const __mmask64 connected_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8, connected_threshold_epi8, _MM_CMPINT_NLE);
-							const __mmask64 active_mask_64 = _mm512_cmp_epi8_mask(permanence_epi8, active_threshold_simd, _MM_CMPINT_NLE);
+							const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
+							const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_simd);
+
+							for (int i = 0; i < 4; ++i)
 							{
-								for (int i = 0; i < 4; ++i)
+								const __mmask16 connected_mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
+								if (connected_mask_16 != 0)
 								{
-									const __mmask16 connected_mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
-									if (connected_mask_16 != 0)
-									{
-										const __m512i sensors_epi32 = get_sensors_epi32(connected_mask_16, delay_origin_epi32_ptr[(block * 4) + i], active_cells_ptr);
-										n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
-										const __mmask16 active_mask_16 = static_cast<__mmask16>(active_mask_64 >> (i * 16));
-										n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
-									}
+									const __m512i sensors_epi32 = get_sensors_epi32(connected_mask_16, delay_origin_epi32_ptr[(block * 4) + i], active_cells_ptr);
+									n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
+									const __mmask16 active_mask_16 = static_cast<__mmask16>(active_mask_64 >> (i * 16));
+									n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
 								}
 							}
 						}
@@ -877,38 +876,6 @@ namespace htm
 						#endif
 
 						return std::make_tuple(n_active_synapses_int, n_potential_synapses_int);
-					}
-
-					template <typename P>
-					std::tuple<int, int> count_active_potential_DD_synapses_hist_ref(
-						const Column<P>& column,
-						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
-						const Dynamic_Param& param)
-					{
-						const auto& dd_synapse_permanence_segment = column.dd_synapse_permanence[segment_i];
-						const auto& dd_synapse_delay_origin_segment = column.dd_synapse_delay_origin[segment_i];
-
-						int n_matching_synapses = 0;
-						int n_active_synapses = 0;
-
-						for (auto synapse_i = 0; synapse_i < column.dd_synapse_count[segment_i]; ++synapse_i)
-						{
-							const Permanence permanence = dd_synapse_permanence_segment[synapse_i];
-							if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
-							{
-								const auto delay_and_cell_id = dd_synapse_delay_origin_segment[synapse_i];
-								const int global_cell_id = get_global_cell_id(delay_and_cell_id);
-								const int delay = get_delay(delay_and_cell_id);
-
-								if (active_cells.get(global_cell_id, delay))
-								{
-									n_matching_synapses++;
-									n_active_synapses += (permanence >= param.TP_DD_PERMANENCE_THRESHOLD);
-								}
-							}
-						}
-						return std::make_tuple(n_active_synapses, n_matching_synapses);
 					}
 
 					// Get the number of active and connected synapses of the provided segment in the provided column
