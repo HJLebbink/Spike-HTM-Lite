@@ -643,6 +643,7 @@ namespace htm
 			std::vector<int> dd_synapse_active_time = std::vector<int>(0);
 		};
 
+
 		//========================================================================
 		template <typename P>
 		struct Layer
@@ -652,12 +653,6 @@ namespace htm
 			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
 			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
 			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
-
-			// default constructor
-			Layer()
-			{
-				this->data.resize(P::N_COLUMNS);
-			}
 
 			std::vector<Column<P>> data;
 
@@ -671,14 +666,31 @@ namespace htm
 			//Number of iterations while learning.
 			int iteration_learn_num = 0;
 
-			//Proximal dendrite synapse origin cell ID.
-			std::vector<std::vector<int>> sp_pd_destination_column = std::vector<std::vector<int>>(P::N_SENSORS);
 
-			//Proximal dendrite synapse permanence.
-			std::vector<std::vector<Permanence, priv::Allocator>> sp_pd_synapse_permanence = std::vector<std::vector<Permanence, priv::Allocator>>(P::N_SENSORS);
+			#pragma region iterate over columns: 
+			//Proximal dendrite synapse origin cell ID: iterate over columns: column pushes
+			using t3 = std::vector<int, priv::Allocator>;
+			std::vector<t3> sp_pd_destination_column_ic = std::vector<t3>(P::N_SENSORS);
+
+			//Proximal dendrite synapse permanence: iterate over columns: column pushes
+			using t4 = std::vector<Permanence, priv::Allocator>;
+			std::vector<t4> sp_pd_synapse_permanence_ic = std::vector<t4>(P::N_SENSORS);
 
 			//Number of dendrite synapses
-			std::vector<int> sp_pd_synapse_count = std::vector<int>(P::N_SENSORS);
+			std::vector<int> sp_pd_synapse_count_ic = std::vector<int>(P::N_SENSORS);
+			#pragma endregion
+
+			#pragma region iterate over sensors
+			//Proximal dendrite synapse permanence: iterate over sensors: sensor pulls
+			using t1 = std::vector<Permanence, priv::Allocator>;
+			std::vector<t1> sp_pd_synapse_permanence_is = std::vector<t1>(P::N_COLUMNS, t1(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD));
+
+			//Proximal dendrite synapse origin cell ID: iterate over sensors: sensor pulls
+			using t2 = std::vector<int, priv::Allocator>;
+			std::vector<t2> sp_pd_synapse_origin_sensor_is = std::vector<t2>(P::N_COLUMNS, t2(P::SP_N_PD_SYNAPSES, P::SP_PD_SYNAPSE_ORIGIN_INVALID));
+
+			#pragma endregion
+
 
 			//moving average denoting the frequency of column activation: used by boosting
 			std::vector<float> sp_active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
@@ -693,6 +705,12 @@ namespace htm
 			Active_Sensors active_sensors;
 			Active_Columns active_columns;
 			#pragma endregion 
+
+			// default constructor
+			Layer()
+			{
+				this->data.resize(P::N_COLUMNS);
+			}
 
 			Column<P>& operator[] (int i)
 			{

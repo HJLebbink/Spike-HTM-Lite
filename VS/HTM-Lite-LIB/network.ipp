@@ -82,7 +82,7 @@ namespace htm
 					{
 						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
 					}
-					if (true) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param1.n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param1.n_visible_sensors_dim1), "\n");
 					layer::one_step(layer1.active_sensors, layer1, time, param1);
 				}
 				{
@@ -96,7 +96,7 @@ namespace htm
 					{
 						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer3.active_columns.get(i));
 					}
-					if (true) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param2.n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param2.n_visible_sensors_dim1), "\n");
 					layer::one_step(layer2.active_sensors, layer2, time, param2);
 				}
 				{
@@ -105,7 +105,7 @@ namespace htm
 					{
 						layer3.active_sensors.set(i, layer2.active_columns.get(i));
 					}
-					if (true) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_sensor_activity<P3>(layer3.active_sensors, param3.n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_sensor_activity<P3>(layer3.active_sensors, param3.n_visible_sensors_dim1), "\n");
 					layer::one_step(layer3.active_sensors, layer3, time, param3);
 				}
 			}
@@ -199,7 +199,6 @@ namespace htm
 				if (!param1.quiet) std::cout << std::endl;
 				return total_mismatch;
 			}
-
 		}
 
 		template <
@@ -225,7 +224,7 @@ namespace htm
 			int N_COLUMNS_L2, int N_BITS_CELL_L2, int HISTORY_L2,
 			int N_COLUMNS_L3, int N_BITS_CELL_L3, int HISTORY_L3,
 			arch_t ARCH>
-			struct network_3Layer
+		struct network_3Layer
 		{
 			static const int N_VISIBLE_SENSORS_L1 = N_VISIBLE_SENSORS;
 			static const int N_HIDDEN_SENSORS_L1 = N_COLUMNS_L2;
@@ -240,7 +239,6 @@ namespace htm
 			using P_L2 = Static_Param<N_COLUMNS_L2, N_BITS_CELL_L2, N_VISIBLE_SENSORS_L2, N_HIDDEN_SENSORS_L2, HISTORY_L2, ARCH>;
 			using P_L3 = Static_Param<N_COLUMNS_L3, N_BITS_CELL_L3, N_VISIBLE_SENSORS_L3, N_HIDDEN_SENSORS_L3, HISTORY_L3, ARCH>;
 		};
-
 
 		template <typename P1, typename P2>
 		int run(

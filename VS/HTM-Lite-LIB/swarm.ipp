@@ -89,30 +89,63 @@ namespace htm
 			}
 		};
 
+		struct Configuration2
+		{
+			bool flag;
+			float mismatch;
+			Dynamic_Param param1;
+			Dynamic_Param param2;
+
+			static constexpr float MISMATCH_INVALID = 4533234.0f; // just a high random number
+
+			Configuration2(const Dynamic_Param& param1, const Dynamic_Param& param2) :
+				param1(param1),
+				param2(param2)
+			{
+				this->mismatch = MISMATCH_INVALID;
+				this->flag = false;
+			}
+			static std::string header_str()
+			{
+				std::ostringstream result;
+				result << "mismatch\t" << Dynamic_Param::header_str() << "\t" << Dynamic_Param::header_str();
+				return result.str();
+			}
+			std::string str() const
+			{
+				std::ostringstream result;
+				//result << std::setw(3) << std::min(6, static_cast<int>(this->mismatch)) << "\t" << param.str();
+				result << std::fixed << std::setw(7) << std::setprecision(3) << this->mismatch << "\t" << param1.str() << "\t" << param2.str();
+				return result.str();
+			}
+		};
+
 		namespace priv
 		{
 			namespace ga
 			{
+				template <typename T>
 				struct Configuration_better
 				{
-					constexpr bool operator()(const Configuration& left, const Configuration& right) const
+					constexpr bool operator()(const T& left, const T& right) const
 					{
 						return (left.mismatch < right.mismatch);
 					}
 				};
 
-				std::vector<Configuration> get_best(const int selection_size, std::vector<Configuration>& pool)
+				template <typename T> 
+				std::vector<T> get_best(const int selection_size, std::vector<T>& pool)
 				{
 					if (pool.size() < selection_size) log_ERROR("swarm::get_best: pool is too small.\n");
 
-					std::vector<Configuration> results;
+					std::vector<T> results;
 					if (pool.size() == selection_size)
 					{
 						for (auto& p : pool) results.push_back(p);
 					}
 					else
 					{
-						std::nth_element(pool.begin(), pool.begin() + selection_size, pool.end(), Configuration_better());
+						std::nth_element(pool.begin(), pool.begin() + selection_size, pool.end(), Configuration_better<T>());
 						const float nth_element_mismatch = pool[selection_size].mismatch;
 						if (false) log_INFO("swarm:get_best: nth_element_mismatch=", nth_element_mismatch,"\n");
 
@@ -271,7 +304,7 @@ namespace htm
 
 			template <typename P>
 			void do_work(
-				const std::vector<Layer<P>::Active_Sensors>& data,
+				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 				Layer<P>& layer,
 				Swarm_Options& options,
 				Configuration& result)
@@ -295,9 +328,37 @@ namespace htm
 				}
 			}
 
+			template <typename P1, typename P2>
+			void do_work(
+				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				Layer<P1>& layer1,
+				Layer<P2>& layer2,
+				Swarm_Options& options,
+				Configuration2& result)
+			{
+				if (!result.flag)
+				{
+					result.flag = true; // using std::atomic_flag would be better...
+					result.param1.progress = false;
+					result.param1.quiet = true;
+
+					htm::layer::init(layer1, result.param1);
+					htm::layer::init(layer2, result.param2);
+					const int total_mismatch = htm::network::run(data, layer1, layer2, result.param1, result.param2);
+
+					if (result.mismatch != Configuration::MISMATCH_INVALID)
+					{
+						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
+					}
+					result.mismatch = static_cast<float>(total_mismatch) / (result.param1.n_time_steps * result.param1.n_times);
+					if (!options.quiet) log_INFO(result.str(), "\n");
+					options.writeline_outputfile(result.str());
+				}
+			}
+
 			template <typename P>
 			void do_work_all(
-				const std::vector<Layer<P>::Active_Sensors>& data,
+				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration>& results)
@@ -307,6 +368,21 @@ namespace htm
 
 				for (int i = start_pos; i < nResults; ++i) do_work(data, layer, options, results[i]);
 				for (int i = 0; i < nResults; ++i) do_work(data, layer, options, results[i]);
+			}
+
+			template <typename P1, typename P2>
+			void do_work_all(
+				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				const int start_pos,
+				Swarm_Options& options,
+				std::vector<Configuration2>& results)
+			{
+				Layer<P1> layer1;
+				Layer<P2> layer2;
+				const int nResults = static_cast<int>(results.size());
+
+				for (int i = start_pos; i < nResults; ++i) do_work(data, layer1, layer2, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(data, layer1, layer2, options, results[i]);
 			}
 		}
 
@@ -344,7 +420,7 @@ namespace htm
 			return results;
 		}
 
-		template <typename P, int N_SENSOR_DIM1, int N_SENSOR_DIM2>
+		template <typename P>
 		std::vector<Configuration> run_ga(
 			const std::string& input_filename,
 			const Dynamic_Param& param,
@@ -385,7 +461,7 @@ namespace htm
 					const Dynamic_Param parent1 = best_indiduals[individual_dist(random_engine)].param;
 					const Dynamic_Param parent2 = best_indiduals[individual_dist(random_engine)].param;
 					const Dynamic_Param child = priv::ga::cross_over(parent1, parent2, options.mutation_rate, random_engine);
-					results.push_back(child);
+					results.push_back(Configuration(child));
 				}
 
 				workers.clear();
@@ -395,7 +471,78 @@ namespace htm
 				}
 				for (auto& t : workers) if (t.joinable()) t.join();
 
-				for (const Configuration& config : results)
+				for (const auto& config : results)
+				{
+					pool.push_back(config);
+				}
+			}
+			return pool;
+		}
+		
+		template <typename P1, typename P2>
+		std::vector<Configuration2> run_ga(
+			const std::string& input_filename,
+			const Dynamic_Param& param1,
+			const Dynamic_Param& param2,
+			Swarm_Options& options)
+		{
+			const int nThreads = static_cast<int>(std::thread::hardware_concurrency());
+			if (true) log_INFO("swarm:run_ga: running ga swarm with ", nThreads, " threads.\n");
+			if (true) log_INFO(Configuration2::header_str(), "\n");
+
+			options.writeline_outputfile(Configuration2::header_str());
+
+			std::random_device r;
+			std::default_random_engine random_engine(r());
+			std::uniform_int_distribution<int> individual_dist(0, options.population_size - 1);
+
+			const auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+
+			std::vector<Configuration2> pool;// = run_random<P1>(input_filename, param, options);
+			std::vector<Configuration2> results;
+			std::vector<std::thread> workers;
+
+			// initialize the pool with random individuals
+			for (int i = 0; i < options.population_size; ++i)
+			{
+				Dynamic_Param new_param1(param1);
+				Dynamic_Param new_param2(param2);
+				priv::random_param(new_param1, random_engine);
+				priv::random_param(new_param2, random_engine);
+				pool.push_back(Configuration2(new_param1, new_param2));
+			}
+
+			for (int epoch = 0; epoch < options.n_epochs; ++epoch)
+			{
+				if (!options.quiet) log_INFO("swarm:run_ga: epoch ", epoch, "\n");
+
+				results.clear();
+				const std::vector<Configuration2> best_indiduals = priv::ga::get_best(options.population_size, pool);
+				for (int i = 0; i < options.population_size; ++i)
+				{
+					const int individual_id1 = individual_dist(random_engine);
+					const int individual_id2 = individual_dist(random_engine);
+
+					const Dynamic_Param parent1_A= best_indiduals[individual_id1].param1;
+					const Dynamic_Param parent2_A = best_indiduals[individual_id2].param1;
+
+					const Dynamic_Param parent1_B = best_indiduals[individual_id1].param2;
+					const Dynamic_Param parent2_B = best_indiduals[individual_id2].param2;
+
+					const Dynamic_Param child_A = priv::ga::cross_over(parent1_A, parent2_A, options.mutation_rate, random_engine);
+					const Dynamic_Param child_B = priv::ga::cross_over(parent1_B, parent2_B, options.mutation_rate, random_engine);
+
+					results.push_back(Configuration2(child_A, child_B));
+				}
+
+				workers.clear();
+				for (int thread = 0; thread < nThreads; ++thread)
+				{
+					workers.push_back(std::thread(priv::do_work_all<P1, P2>, data, thread * 4, std::ref(options), std::ref(results)));
+				}
+				for (auto& t : workers) if (t.joinable()) t.join();
+
+				for (const auto& config : results)
 				{
 					pool.push_back(config);
 				}

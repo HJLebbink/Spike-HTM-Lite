@@ -32,6 +32,9 @@ namespace htm
 	using namespace ::tools::log;
 	using namespace ::tools;
 
+	//Whether the spacial pooler pushes 
+	constexpr bool INDEXED_BY_SENSOR = false;
+
 	//========================================================================
 	enum arch_t
 	{
