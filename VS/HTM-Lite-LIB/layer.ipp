@@ -78,7 +78,7 @@ namespace htm
 
 							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_ic[sensor_i]; ++synapse_i)
 							{
-								if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+								if (permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
 								{
 									const int column_i = destination_columns[synapse_i];
 									if (predicted_columns.get(column_i))
@@ -125,7 +125,7 @@ namespace htm
 
 							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
 							{
-								if (permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+								if (permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
 								{
 									const int column_i = destination_columns[synapse_i];
 									if (predicted_columns.get(column_i))
@@ -168,7 +168,7 @@ namespace htm
 
 								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 								{
-									if (synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+									if (synapse_permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
 									{
 										const auto sensor_i = synapse_origin[synapse_i]; // gather
 										if (sensor_i < P::N_VISIBLE_SENSORS)
@@ -267,7 +267,7 @@ namespace htm
 
 						for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 						{
-							if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_CONNECTED_THRESHOLD)
+							if (column.pd_synapse_permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
 							{
 								const auto sensor_idx = column.pd_synapse_origin[synapse_i];
 								inferred_sensor_activity[sensor_idx]++;

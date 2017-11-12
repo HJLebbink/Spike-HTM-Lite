@@ -105,28 +105,28 @@ namespace htm
 		{
 			namespace ga
 			{
-				template <typename T>
+				template <int SIZE>
 				struct Configuration_better
 				{
-					constexpr bool operator()(const T& left, const T& right) const
+					constexpr bool operator()(const Configuration<SIZE>& left, const Configuration<SIZE>& right) const
 					{
 						return (left.mismatch < right.mismatch);
 					}
 				};
 
-				template <typename T> 
-				std::vector<T> get_best(const int selection_size, std::vector<T>& pool)
+				template <int SIZE> 
+				std::vector<Configuration<SIZE>> get_best(const int selection_size, std::vector<Configuration<SIZE>>& pool)
 				{
 					if (pool.size() < selection_size) log_ERROR("swarm::get_best: pool is too small.\n");
 
-					std::vector<T> results;
+					std::vector<Configuration<SIZE>> results;
 					if (pool.size() == selection_size)
 					{
 						for (auto& p : pool) results.push_back(p);
 					}
 					else
 					{
-						std::nth_element(pool.begin(), pool.begin() + selection_size, pool.end(), Configuration_better<T>());
+						std::nth_element(pool.begin(), pool.begin() + selection_size, pool.end(), Configuration_better<SIZE>());
 						const float nth_element_mismatch = pool[selection_size].mismatch;
 						if (false) log_INFO("swarm:get_best: nth_element_mismatch=", nth_element_mismatch,"\n");
 
@@ -202,7 +202,7 @@ namespace htm
 					Dynamic_Param result(param1);
 					std::uniform_int_distribution<int> bool_dist(0, 1);
 
-					result.SP_PD_CONNECTED_THRESHOLD = (bool_dist(engine) == 1) ? param1.SP_PD_CONNECTED_THRESHOLD : param2.SP_PD_CONNECTED_THRESHOLD;
+					result.SP_PD_PERMANENCE_THRESHOLD = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_THRESHOLD : param2.SP_PD_PERMANENCE_THRESHOLD;
 					result.SP_PD_PERMANENCE_INIT = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_INIT : param2.SP_PD_PERMANENCE_INIT;
 					result.SP_PD_PERMANENCE_INC = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_INC : param2.SP_PD_PERMANENCE_INC;
 					result.SP_PD_PERMANENCE_DEC = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_DEC : param2.SP_PD_PERMANENCE_DEC;
@@ -210,15 +210,15 @@ namespace htm
 					result.SP_LOCAL_AREA_DENSITY = (bool_dist(engine) == 1) ? param1.SP_LOCAL_AREA_DENSITY : param2.SP_LOCAL_AREA_DENSITY;
 
 					result.TP_DD_SEGMENT_ACTIVE_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD : param2.TP_DD_SEGMENT_ACTIVE_THRESHOLD;
-					result.MIN_DD_ACTIVATION_THRESHOLD = (bool_dist(engine) == 1) ? param1.MIN_DD_ACTIVATION_THRESHOLD : param2.MIN_DD_ACTIVATION_THRESHOLD;
+					result.TP_MIN_DD_ACTIVATION_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_MIN_DD_ACTIVATION_THRESHOLD : param2.TP_MIN_DD_ACTIVATION_THRESHOLD;
 					result.TP_DD_MAX_NEW_SYNAPSE_COUNT = (bool_dist(engine) == 1) ? param1.TP_DD_MAX_NEW_SYNAPSE_COUNT : param2.TP_DD_MAX_NEW_SYNAPSE_COUNT;
 
-					result.TP_DD_ACTIVE_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_DD_ACTIVE_THRESHOLD : param2.TP_DD_ACTIVE_THRESHOLD;
+					result.TP_DD_PERMANENCE_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_THRESHOLD : param2.TP_DD_PERMANENCE_THRESHOLD;
 					result.TP_DD_PERMANENCE_INC = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_INC : param2.TP_DD_PERMANENCE_INC;
 					result.TP_DD_PERMANENCE_DEC = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_DEC : param2.TP_DD_PERMANENCE_DEC;
 					result.TP_DD_PREDICTED_SEGMENT_DEC = (bool_dist(engine) == 1) ? param1.TP_DD_PREDICTED_SEGMENT_DEC : param2.TP_DD_PREDICTED_SEGMENT_DEC;
 
-					mutate_byte(result.SP_PD_CONNECTED_THRESHOLD, 0, 128, mutation_rate, engine);
+					mutate_byte(result.SP_PD_PERMANENCE_THRESHOLD, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_INIT, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_INC, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_DEC, 0, 128, mutation_rate, engine);
@@ -226,10 +226,10 @@ namespace htm
 					mutate_float(result.SP_LOCAL_AREA_DENSITY, 0, 0.1, mutation_rate, engine);
 
 					mutate_int(result.TP_DD_SEGMENT_ACTIVE_THRESHOLD, 1, 100, mutation_rate, engine);
-					mutate_int(result.MIN_DD_ACTIVATION_THRESHOLD, 1, 100, mutation_rate, engine);
+					mutate_int(result.TP_MIN_DD_ACTIVATION_THRESHOLD, 1, 100, mutation_rate, engine);
 					mutate_int(result.TP_DD_MAX_NEW_SYNAPSE_COUNT, 1, 100, mutation_rate, engine);
 
-					mutate_byte(result.TP_DD_ACTIVE_THRESHOLD, 0, 127, mutation_rate, engine);
+					mutate_byte(result.TP_DD_PERMANENCE_THRESHOLD, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PERMANENCE_INC, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PERMANENCE_DEC, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PREDICTED_SEGMENT_DEC, 0, 127, mutation_rate, engine);
@@ -282,17 +282,17 @@ namespace htm
 
 				param.SP_LOCAL_AREA_DENSITY = SP_LOCAL_AREA_DENSITY_dist(engine);
 
-				param.SP_PD_CONNECTED_THRESHOLD = static_cast<signed char>(SP_PD_PERMANENCE_THRESHOLD_dist(engine));
+				param.SP_PD_PERMANENCE_THRESHOLD = static_cast<signed char>(SP_PD_PERMANENCE_THRESHOLD_dist(engine));
 				param.SP_PD_PERMANENCE_INIT = static_cast<signed char>(SP_PD_PERMANENCE_INIT_dist(engine));
 				param.SP_PD_PERMANENCE_INC = static_cast<signed char>(SP_PD_PERMANENCE_INC_dist(engine));
 				param.SP_PD_PERMANENCE_DEC = static_cast<signed char>(SP_PD_PERMANENCE_DEC_dist(engine));
 				param.SP_PD_PERMANENCE_INC_WEAK = static_cast<signed char>(SP_PD_PERMANENCE_INC_WEAK_dist(engine));
 
 				param.TP_DD_SEGMENT_ACTIVE_THRESHOLD = TP_DD_ACTIVATION_THRESHOLD_dist(engine);
-				param.MIN_DD_ACTIVATION_THRESHOLD = MIN_DD_ACTIVATION_THRESHOLD_dist(engine);
+				param.TP_MIN_DD_ACTIVATION_THRESHOLD = MIN_DD_ACTIVATION_THRESHOLD_dist(engine);
 				param.TP_DD_MAX_NEW_SYNAPSE_COUNT = TP_DD_MAX_NEW_SYNAPSE_COUNT_dist(engine);
 
-				param.TP_DD_ACTIVE_THRESHOLD = static_cast<signed char>(TP_DD_PERMANENCE_THRESHOLD_dist(engine));
+				param.TP_DD_PERMANENCE_THRESHOLD = static_cast<signed char>(TP_DD_PERMANENCE_THRESHOLD_dist(engine));
 				param.TP_DD_PERMANENCE_INC = static_cast<signed char>(TP_DD_PERMANENCE_INC_dist(engine));
 				param.TP_DD_PERMANENCE_DEC = static_cast<signed char>(TP_DD_PERMANENCE_DEC_dist(engine));
 				param.TP_DD_PREDICTED_SEGMENT_DEC = static_cast<signed char>(TP_DD_PREDICTED_SEGMENT_DEC_dist(engine));

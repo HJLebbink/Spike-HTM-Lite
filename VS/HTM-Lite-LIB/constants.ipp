@@ -206,7 +206,7 @@ namespace htm
 
 		//If the permanence value for a synapse is GREATER (not equal) than this value,
 		//the synapse is said to be active.
-		Permanence SP_PD_CONNECTED_THRESHOLD = 0;
+		Permanence SP_PD_PERMANENCE_THRESHOLD = 0;
 
 		//Initial permanence of a new synapse
 		Permanence SP_PD_PERMANENCE_INIT = 1;
@@ -237,14 +237,14 @@ namespace htm
 		//is eligible for learning.
 		//If the number of synapses active on a segment is at least this
 		//threshold, it is selected as the best matching cell in a bursting column.
-		int MIN_DD_ACTIVATION_THRESHOLD = 4;
+		int TP_MIN_DD_ACTIVATION_THRESHOLD = 4;
 
 		//The maximum number of synapses added to a segment during learning.
 		int TP_DD_MAX_NEW_SYNAPSE_COUNT = 16;
 
 		//If the permanence value for a synapse is GREATER (not equal) than this value, 
 		//the synapse is said to be active.
-		Permanence TP_DD_ACTIVE_THRESHOLD = 0;
+		Permanence TP_DD_PERMANENCE_THRESHOLD = 0;
 
 		//Amount by which permanences of synapses are incremented during learning.
 		Permanence TP_DD_PERMANENCE_INC = 20;
@@ -271,8 +271,8 @@ namespace htm
 			result << "SP_PD_PERMANENCE_DEC\t";
 			result << "SP_PD_PERMANENCE_INC_WEAK\t";
 
-			result << "TP_DD_ACTIVATION_THRESHOLD\t";
-			result << "MIN_DD_ACTIVATION_THRESHOLD\t";
+			result << "TP_DD_SEGMENT_ACTIVE_THRESHOLD\t";
+			result << "TP_MIN_DD_ACTIVATION_THRESHOLD\t";
 			result << "TP_DD_MAX_NEW_SYNAPSE_COUNT\t";
 
 			result << "TP_DD_PERMANENCE_THRESHOLD\t";
@@ -287,17 +287,17 @@ namespace htm
 			std::ostringstream result;
 			result << std::fixed << std::setw(7) << std::setprecision(5) << this->SP_LOCAL_AREA_DENSITY << "\t";
 
-			result << std::setw(2) << static_cast<int>(this->SP_PD_CONNECTED_THRESHOLD) << "\t";
+			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_THRESHOLD) << "\t";
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_INIT) << "\t";
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_INC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_DEC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_INC_WEAK) << "\t";
 
 			result << std::setw(2) << this->TP_DD_SEGMENT_ACTIVE_THRESHOLD << "\t";
-			result << std::setw(2) << this->MIN_DD_ACTIVATION_THRESHOLD << "\t";
+			result << std::setw(2) << this->TP_MIN_DD_ACTIVATION_THRESHOLD << "\t";
 			result << std::setw(2) << this->TP_DD_MAX_NEW_SYNAPSE_COUNT << "\t";
 
-			result << std::setw(2) << static_cast<int>(this->TP_DD_ACTIVE_THRESHOLD) << "\t";
+			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_THRESHOLD) << "\t";
 			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_INC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_DEC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->TP_DD_PREDICTED_SEGMENT_DEC);

@@ -72,7 +72,6 @@ namespace htm
 				Layer<P2>& layer2,
 				Layer<P3>& layer3)
 			{
-				//static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
 				{
 					//Previous layer 2 columns become hidden sensors in layer 1
 					for (int i = 0; i < P1::N_HIDDEN_SENSORS; ++i)
@@ -215,8 +214,6 @@ namespace htm
 			Layer<P2>& layer2,
 			Layer<P3>& layer3)
 		{
-			//static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
-
 			int total_mismatch = 0;
 			int mismatch = 0;
 			int current_mismatch = 0;

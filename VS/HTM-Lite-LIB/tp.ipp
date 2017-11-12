@@ -782,7 +782,7 @@ namespace htm
 								if (active_cells.get(global_cell_id, delay)) // deadly gather here!
 								{
 									n_potential_synapses++;
-									n_active_synapses += (permanence > param.TP_DD_ACTIVE_THRESHOLD);
+									n_active_synapses += (permanence > param.TP_DD_PERMANENCE_THRESHOLD);
 								}
 							}
 						}
@@ -829,7 +829,7 @@ namespace htm
 						auto active_cells_ptr = active_cells.data();
 						
 						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
-						const __m512i active_threshold_simd = _mm512_set1_epi8(param.TP_DD_ACTIVE_THRESHOLD);
+						const __m512i active_threshold_simd = _mm512_set1_epi8(param.TP_DD_PERMANENCE_THRESHOLD);
 
 						__m512i n_potential_synapses = _mm512_setzero_si512();
 						__m512i n_active_synapses = _mm512_setzero_si512();
@@ -904,7 +904,7 @@ namespace htm
 								if (active_cells.get(global_cell_id, delay))
 								{
 									n_matching_synapses++;
-									n_active_synapses += (permanence >= param.TP_DD_ACTIVE_THRESHOLD);
+									n_active_synapses += (permanence >= param.TP_DD_PERMANENCE_THRESHOLD);
 								}
 							}
 						}
@@ -982,7 +982,7 @@ namespace htm
 							const int n_active_synapses = std::get<0>(tup);
 							const int n_potential_synapses = std::get<1>(tup);
 
-							if (n_potential_synapses > param.MIN_DD_ACTIVATION_THRESHOLD)
+							if (n_potential_synapses > param.TP_MIN_DD_ACTIVATION_THRESHOLD)
 							{
 								matching_segments_current.add(segment_i, n_potential_synapses);
 							}

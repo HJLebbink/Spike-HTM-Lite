@@ -61,7 +61,7 @@ inline void test_1layer()
 	param.progress_display_interval = 20;
 
 	param.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
-	param.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -74,22 +74,20 @@ inline void test_1layer()
 	htm::layer::run_multiple_times(data, layer, param);
 }
 
-inline void test_network()
+inline void test_2layers()
 {
 	// static properties: properties that need to be known at compile time:
 
-	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
-	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
-	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS_L1 = 1 * 4 * 8;
-	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
-	const int N_BITS_CELL_L1 = 4;
 	const int N_SENSORS_DIM1 = 20;
 	const int N_SENSORS_DIM2 = 20;
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+
+	const int N_BLOCKS_L1 = 2 * 8;
+	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	const int N_BITS_CELL_L1 = 4;
 	const int HISTORY_L1 = 8;
 
-	const int N_BLOCKS_L2 = 2* 4 * 8;
+	const int N_BLOCKS_L2 = 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
 	const int HISTORY_L2 = 8;
@@ -108,58 +106,130 @@ inline void test_network()
 	param1.progress_display_interval = 200;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
-	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
 	Dynamic_Param param2(param1);
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-	if (false)
-	{
-		using Network_Config = network::network_2Layer<
-			N_VISIBLE_SENSORS_L1,
-			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-			ARCH>;
+	using Network_Config = network::network_2Layer<
+		N_VISIBLE_SENSORS_L1,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		ARCH>;
 
-		using P1 = Network_Config::P_L1;
-		using P2 = Network_Config::P_L2;
+	using P1 = Network_Config::P_L1;
+	using P2 = Network_Config::P_L2;
 
-		Layer<P1> layer1;
-		Layer<P2> layer2;
+	Layer<P1> layer1;
+	Layer<P2> layer2;
 
-		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
-		auto param = std::array<Dynamic_Param, 2>{param1, param2};
-		htm::network::run_multiple_times(data, param, layer1, layer2);
-	}
-	else
-	{
-		Dynamic_Param param3(param1);
+	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+	auto param = std::array<Dynamic_Param, 2>{param1, param2};
+	htm::network::run_multiple_times(data, param, layer1, layer2);
+}
 
-		const int N_BLOCKS_L3 = 1 * 8;
-		const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
-		const int N_BITS_CELL_L3 = 4;
-		const int HISTORY_L3 = 8;
+inline void test_3layers()
+{
+	// static properties: properties that need to be known at compile time:
 
-		using Network_Config = network::network_3Layer<
-			N_VISIBLE_SENSORS_L1,
-			N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-			N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-			N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
-			ARCH>;
+	const int N_SENSORS_DIM1 = 20;
+	const int N_SENSORS_DIM2 = 20;
+	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 
-		using P1 = Network_Config::P_L1;
-		using P2 = Network_Config::P_L2;
-		using P3 = Network_Config::P_L3;
-		
-		Layer<P1> layer1;
-		Layer<P2> layer2;
-		Layer<P3> layer3;
+	const int N_BLOCKS_L1 = 2 * 8;
+	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	const int N_BITS_CELL_L1 = 4;
+	const int HISTORY_L1 = 8;
 
-		auto data = encoder::encode_pass_through<P1>(input_filename, param1);
-		auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
-		htm::network::run_multiple_times(data, param, layer1, layer2, layer3);
-	}
+	const int N_BLOCKS_L2 = 1 * 8;
+	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	const int N_BITS_CELL_L2 = 4;
+	const int HISTORY_L2 = 8;
+
+	const int N_BLOCKS_L3 = 1 * 8;
+	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
+	const int N_BITS_CELL_L3 = 4;
+	const int HISTORY_L3 = 8;
+
+	const arch_t ARCH = arch_t::RUNTIME;
+
+	// dynamic properties: properties that can be changed while the program is running.
+	Dynamic_Param param1;
+	param1.learn = true;
+	param1.n_time_steps = 500;
+	param1.n_times = 10;
+	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
+	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
+
+	param1.progress = false;
+	param1.progress_display_interval = 20;
+
+	Dynamic_Param param2(param1);
+	Dynamic_Param param3(param1);
+
+	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+
+	param1.SP_LOCAL_AREA_DENSITY = 0.05963;
+	param1.SP_PD_PERMANENCE_THRESHOLD = 20;
+	param1.SP_PD_PERMANENCE_INIT = 23;
+	param1.SP_PD_PERMANENCE_INC = 8;
+	param1.SP_PD_PERMANENCE_DEC = 30;
+	param1.SP_PD_PERMANENCE_INC_WEAK = 26;
+	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 18;
+	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 21;
+	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 38;
+	param1.TP_DD_PERMANENCE_THRESHOLD = 6;
+	param1.TP_DD_PERMANENCE_INC = 26;
+	param1.TP_DD_PERMANENCE_DEC = 21;
+	param1.TP_DD_PREDICTED_SEGMENT_DEC = 7;
+
+	param2.SP_LOCAL_AREA_DENSITY = 0.01196;
+	param2.SP_PD_PERMANENCE_THRESHOLD = 18;
+	param2.SP_PD_PERMANENCE_INIT = 4;
+	param2.SP_PD_PERMANENCE_INC = 5;
+	param2.SP_PD_PERMANENCE_DEC = 1;
+	param2.SP_PD_PERMANENCE_INC_WEAK = 27;
+	param2.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 21;
+	param2.TP_MIN_DD_ACTIVATION_THRESHOLD = 5;
+	param2.TP_DD_MAX_NEW_SYNAPSE_COUNT = 23;
+	param2.TP_DD_PERMANENCE_THRESHOLD = 25;
+	param2.TP_DD_PERMANENCE_INC = 14;
+	param2.TP_DD_PERMANENCE_DEC = 30;
+	param2.TP_DD_PREDICTED_SEGMENT_DEC = 23;
+
+	param3.SP_LOCAL_AREA_DENSITY = 0.01781;
+	param3.SP_PD_PERMANENCE_THRESHOLD = 11;
+	param3.SP_PD_PERMANENCE_INIT = 25;
+	param3.SP_PD_PERMANENCE_INC = 12;
+	param3.SP_PD_PERMANENCE_DEC = 10;
+	param3.SP_PD_PERMANENCE_INC_WEAK = 11;
+	param3.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 7;
+	param3.TP_MIN_DD_ACTIVATION_THRESHOLD = 18;
+	param3.TP_DD_MAX_NEW_SYNAPSE_COUNT = 32;
+	param3.TP_DD_PERMANENCE_THRESHOLD = 18;
+	param3.TP_DD_PERMANENCE_INC = 9;
+	param3.TP_DD_PERMANENCE_DEC = 10;
+	param3.TP_DD_PREDICTED_SEGMENT_DEC = 8;
+
+	using Network_Config = network::network_3Layer<
+		N_VISIBLE_SENSORS_L1,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
+		ARCH>;
+
+	using P1 = Network_Config::P_L1;
+	using P2 = Network_Config::P_L2;
+	using P3 = Network_Config::P_L3;
+
+	Layer<P1> layer1;
+	Layer<P2> layer2;
+	Layer<P3> layer3;
+
+	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
+	htm::network::run_multiple_times(data, param, layer1, layer2, layer3);
 }
 
 inline void test_swarm_1layer()
@@ -195,7 +265,7 @@ inline void test_swarm_1layer()
 	//htm::swarm::run_random(input_filename, param);
 
 	// Swarm options
-	const std::string outputfilename = "C:/Temp/VS/htm_ga_results.csv";
+	const std::string outputfilename = "C:/Temp/VS/htm_ga_results_l1.csv";
 	swarm::Swarm_Options options;
 	options.population_size = 100;
 	options.n_epochs = 100;
@@ -214,7 +284,7 @@ inline void test_swarm_1layer()
 	htm::swarm::run_ga<P>(input_filename, param, options);
 }
 
-inline void test_swarm_2layer()
+inline void test_swarm_2layers()
 {
 	// static properties: properties that need to be known at compile time:
 
@@ -248,13 +318,13 @@ inline void test_swarm_2layer()
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
-	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
 	Dynamic_Param param2(param1);
 
 	// Swarm options
-	const std::string outputfilename = "C:/Temp/VS/htm_ga_results.csv";
+	const std::string outputfilename = "C:/Temp/VS/htm_ga_results_l2.csv";
 	swarm::Swarm_Options options;
 	options.population_size = 100;
 	options.n_epochs = 100;
@@ -282,7 +352,7 @@ inline void test_swarm_2layer()
 	htm::swarm::run_ga<P1, P2>(input_filename, param, options);
 }
 
-inline void test_swarm_3layer()
+inline void test_swarm_3layers()
 {
 	// static properties: properties that need to be known at compile time:
 
@@ -290,9 +360,6 @@ inline void test_swarm_3layer()
 	const int N_SENSORS_DIM2 = 20;
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 
-	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
-	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
-	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
 	const int N_BLOCKS_L1 = 2 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
@@ -322,14 +389,14 @@ inline void test_swarm_3layer()
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
-	param1.MIN_DD_ACTIVATION_THRESHOLD = 14;
+	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
 	Dynamic_Param param2(param1);
 	Dynamic_Param param3(param1);
 
 	// Swarm options
-	const std::string outputfilename = "C:/Temp/VS/htm_ga_results.csv";
+	const std::string outputfilename = "C:/Temp/VS/htm_ga_results_l3.csv";
 	swarm::Swarm_Options options;
 	options.population_size = 100;
 	options.n_epochs = 100;
@@ -363,10 +430,11 @@ int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
 	if (false) test_1layer();
-	if (false) test_network();
+	if (false) test_2layers();
+	if (true) test_3layers();
 	if (false) test_swarm_1layer();
-	if (false) test_swarm_2layer();
-	if (true) test_swarm_3layer();
+	if (false) test_swarm_2layers();
+	if (false) test_swarm_3layers();
 
 	const auto end_time = std::chrono::system_clock::now();
 
