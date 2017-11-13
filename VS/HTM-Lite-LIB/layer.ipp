@@ -73,10 +73,10 @@ namespace htm
 						{
 							int sensor_activity = 0;
 
-							const auto& permanence = layer.sp_pd_synapse_permanence_ic[sensor_i];
-							const auto& destination_columns = layer.sp_pd_destination_column_ic[sensor_i];
+							const auto& permanence = layer.sp_pd_synapse_permanence_is[sensor_i];
+							const auto& destination_columns = layer.sp_pd_destination_column_is[sensor_i];
 
-							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_ic[sensor_i]; ++synapse_i)
+							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_is[sensor_i]; ++synapse_i)
 							{
 								if (permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
 								{
@@ -163,8 +163,8 @@ namespace htm
 							const bool column_is_predicted = column.active_dd_segments.any_current();
 							if (column_is_predicted)
 							{
-								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_is[column_i];
-								const auto& synapse_permanence = layer.sp_pd_synapse_permanence_is[column_i];
+								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
+								const auto& synapse_permanence = layer.sp_pd_synapse_permanence_ic[column_i];
 
 								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 								{
@@ -197,7 +197,7 @@ namespace htm
 					//out
 					Layer<P>::Active_Visible_Sensors& predicted_sensors)
 				{
-					if (INDEXED_BY_SENSOR)
+					if (P::SP_INDEXED_BY_SENSOR)
 					{
 						if (architecture_switch(P::ARCH) == arch_t::X64) indexed_by_sensor::get_predicted_sensors_is_ref(layer, sensor_threshold, param, predicted_sensors);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512) indexed_by_sensor::get_predicted_sensors_is_ref(layer, sensor_threshold, param, predicted_sensors);
@@ -237,9 +237,9 @@ namespace htm
 			void add_sensor_noise(
 				Layer<P>::Active_Sensors& active_sensors)
 			{
-				if (P::SENSOR_NOISE_PERCENT > 0)
+				if (P::SP_SENSOR_NOISE_PERCENT > 0)
 				{
-					const int RAND_PERCENT = P::SENSOR_NOISE_PERCENT;
+					const int RAND_PERCENT = P::SP_SENSOR_NOISE_PERCENT;
 					int i = random::rand_int32(1, 200 * RAND_PERCENT);
 					while (i < P::N_VISIBLE_SENSORS)
 					{
@@ -355,13 +355,13 @@ namespace htm
 		void init(Layer<P>& layer, const Dynamic_Param& param)
 		{
 			// reset pd synapses
-			if (INDEXED_BY_SENSOR)
+			if (P::SP_INDEXED_BY_SENSOR)
 			{
 				for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 				{
-					layer.sp_pd_destination_column_ic[sensor_i].clear();
-					layer.sp_pd_synapse_permanence_ic[sensor_i].clear();
-					layer.sp_pd_synapse_count_ic[sensor_i] = 0;
+					layer.sp_pd_destination_column_is[sensor_i].clear();
+					layer.sp_pd_synapse_permanence_is[sensor_i].clear();
+					layer.sp_pd_synapse_count_is[sensor_i] = 0;
 				}
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
@@ -371,9 +371,9 @@ namespace htm
 						auto& column = layer.data[column_i];
 						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, column.random_number);
 
-						auto& destination = layer.sp_pd_destination_column_ic[random_sensor];
-						auto& permanence = layer.sp_pd_synapse_permanence_ic[random_sensor];
-						const int old_size = layer.sp_pd_synapse_count_ic[random_sensor];
+						auto& destination = layer.sp_pd_destination_column_is[random_sensor];
+						auto& permanence = layer.sp_pd_synapse_permanence_is[random_sensor];
+						const int old_size = layer.sp_pd_synapse_count_is[random_sensor];
 						const int new_size = old_size + 1;
 
 						if (destination.size() <= new_size)
@@ -385,7 +385,7 @@ namespace htm
 
 						destination[old_size] = column_i;
 						permanence[old_size] = param.SP_PD_PERMANENCE_INIT;
-						layer.sp_pd_synapse_count_ic[random_sensor] = new_size;
+						layer.sp_pd_synapse_count_is[random_sensor] = new_size;
 					}
 				}
 			}
@@ -394,8 +394,8 @@ namespace htm
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
 					auto& column = layer.data[column_i];
-					auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_is[column_i];
-					auto& synapse_permanence = layer.sp_pd_synapse_permanence_is[column_i];
+					auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
+					auto& synapse_permanence = layer.sp_pd_synapse_permanence_ic[column_i];
 
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{

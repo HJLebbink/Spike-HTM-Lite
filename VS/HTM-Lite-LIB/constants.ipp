@@ -32,9 +32,6 @@ namespace htm
 	using namespace ::tools::log;
 	using namespace ::tools;
 
-	//Whether the spacial pooler pushes 
-	constexpr bool INDEXED_BY_SENSOR = false;
-
 	//========================================================================
 	enum arch_t
 	{
@@ -142,7 +139,10 @@ namespace htm
 		static constexpr float SP_BOOST_STRENGTH = 0.25;
 
 		//Percentage of noise added to sensors; use zero for no noise.
-		static constexpr int SENSOR_NOISE_PERCENT = 0;
+		static constexpr int SP_SENSOR_NOISE_PERCENT = 0;
+
+		//Whether the spacial pooler pushes 
+		static constexpr bool SP_INDEXED_BY_SENSOR = false;
 
 		#pragma endregion
 		//========================================================================

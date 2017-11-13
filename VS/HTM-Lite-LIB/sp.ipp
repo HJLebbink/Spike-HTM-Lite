@@ -222,10 +222,10 @@ namespace htm
 						{
 							if (active_sensors.get(sensor_i))
 							{
-								const auto& destination_columns = layer.sp_pd_destination_column_ic[sensor_i];
-								const auto& permanences = layer.sp_pd_synapse_permanence_ic[sensor_i];
+								const auto& destination_columns = layer.sp_pd_destination_column_is[sensor_i];
+								const auto& permanences = layer.sp_pd_synapse_permanence_is[sensor_i];
 
-								for (auto i = 0; i < layer.sp_pd_synapse_count_ic[sensor_i]; ++i)
+								for (auto i = 0; i < layer.sp_pd_synapse_count_is[sensor_i]; ++i)
 								{
 									if (permanences[i] > param.SP_PD_PERMANENCE_THRESHOLD)
 									{
@@ -256,8 +256,8 @@ namespace htm
 					{
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const auto& permanence = layer.sp_pd_synapse_permanence_is[column_i];
-							const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_is[column_i];
+							const auto& permanence = layer.sp_pd_synapse_permanence_ic[column_i];
+							const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
 
 							int overlap = 0;
 							for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
@@ -324,8 +324,8 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence_is[column_i].data());
-							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin_sensor_is[column_i].data());
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence_ic[column_i].data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin_sensor_ic[column_i].data());
 
 							__m512i overlap = _mm512_setzero_epi32();
 
@@ -433,8 +433,8 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence_is[column_i].data());
-							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin_sensor_is[column_i].data());
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence_ic[column_i].data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin_sensor_ic[column_i].data());
 
 							__m512i overlap_epu16_AB = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
 							__m512i overlap_epu16_CD = _mm512_setzero_si512(); // contains 32 overlap values of 16bits
@@ -487,7 +487,7 @@ namespace htm
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
-					if (INDEXED_BY_SENSOR)
+					if (P::SP_INDEXED_BY_SENSOR)
 					{
 						if (architecture_switch(P::ARCH) == arch_t::X64) indexed_by_sensor::calc_overlap_is_ref(layer, param, active_sensors, overlaps);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512) indexed_by_sensor::calc_overlap_is_ref(layer, param, active_sensors, overlaps);
@@ -538,11 +538,11 @@ namespace htm
 					{
 						for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 						{
-							const auto& destination_columns = layer.sp_pd_destination_column_ic[sensor_i];
-							auto& permanence = layer.sp_pd_synapse_permanence_ic[sensor_i];
+							const auto& destination_columns = layer.sp_pd_destination_column_is[sensor_i];
+							auto& permanence = layer.sp_pd_synapse_permanence_is[sensor_i];
 							const bool sensor_is_active = active_sensors.get(sensor_i);
 
-							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_ic[sensor_i]; ++synapse_i)
+							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_is[sensor_i]; ++synapse_i)
 							{
 								const auto column_i = destination_columns[synapse_i];
 								if (active_columns.get(column_i))
@@ -590,8 +590,8 @@ namespace htm
 
 						for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 						{
-							auto destination_columns_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_destination_column_ic[sensor_i].data());
-							auto permanence_epi8_ptr = reinterpret_cast<__m128i *>(layer.sp_pd_synapse_permanence_ic[sensor_i].data());
+							auto destination_columns_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_destination_column_is[sensor_i].data());
+							auto permanence_epi8_ptr = reinterpret_cast<__m128i *>(layer.sp_pd_synapse_permanence_is[sensor_i].data());
 
 							const __m128i inc_epi8 = _mm_set1_epi8(active_sensors.get(sensor_i) ? param.SP_PD_PERMANENCE_INC : -param.SP_PD_PERMANENCE_DEC);
 
@@ -641,8 +641,8 @@ namespace htm
 						{
 							if (active_columns.get(column_i))
 							{
-								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_is[column_i];
-								auto& permanence = layer.sp_pd_synapse_permanence_is[column_i];
+								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
+								auto& permanence = layer.sp_pd_synapse_permanence_ic[column_i];
 
 								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 								{
@@ -669,7 +669,7 @@ namespace htm
 					const Layer<P>::Active_Columns& active_columns,
 					const Layer<P>::Active_Sensors& active_sensors)
 				{
-					if (INDEXED_BY_SENSOR)
+					if (P::SP_INDEXED_BY_SENSOR)
 					{
 						if (architecture_switch(P::ARCH) == arch_t::X64) indexed_by_sensor::update_synapses_is_ref(layer, param, active_columns, active_sensors);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512) indexed_by_sensor::update_synapses_is_ref(layer, param, active_columns, active_sensors);
@@ -756,10 +756,10 @@ namespace htm
 
 				for (auto sensor_i = 0; sensor_i < P::SP_N_PD_SYNAPSES; ++sensor_i)
 				{
-					const auto& destination = layer.sp_pd_destination_column_ic[sensor_i];
-					auto& permanance = layer.sp_pd_synapse_permanence_ic[sensor_i];
+					const auto& destination = layer.sp_pd_destination_column_is[sensor_i];
+					auto& permanance = layer.sp_pd_synapse_permanence_is[sensor_i];
 
-					for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_ic[sensor_i]; ++synapse_i)
+					for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_is[sensor_i]; ++synapse_i)
 					{
 						const auto column_i = destination[synapse_i];
 						if (overlap_duty_cycle[column_i] < min_overlap_duty_cycle[column_i]) // the provided column is a weak column
