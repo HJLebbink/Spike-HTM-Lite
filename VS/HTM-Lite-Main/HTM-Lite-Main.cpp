@@ -24,15 +24,22 @@
 #include "..\HTM-Lite-LIB\parameters.ipp"
 #include "..\HTM-Lite-LIB\types.ipp"
 #include "..\HTM-Lite-LIB\layer.ipp"
+#include "..\HTM-Lite-LIB\datastream.ipp"
 #include "..\HTM-Lite-LIB\swarm.ipp"
 #include "..\HTM-Lite-LIB\network.ipp"
 
 using namespace htm;
 using namespace htm::types;
+using namespace htm::datastream;
 
 inline void test_1layer()
 {
 	// static properties: properties that need to be known at compile time:
+
+	const int N_SENSORS_DIM1 = 20;
+	const int N_SENSORS_DIM2 = 20;
+	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	const int N_HIDDEN_SENSORS = 0;
 
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
@@ -40,12 +47,8 @@ inline void test_1layer()
 	const int N_BLOCKS = 10 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int N_SENSORS_DIM1 = 20;
-	const int N_SENSORS_DIM2 = 20;
-	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int N_HIDDEN_SENSORS = 0;
-
 	const int HISTORY = 8;
+
 	//const arch_t ARCH = arch_t::X64;
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -64,14 +67,26 @@ inline void test_1layer()
 	param.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
 	param.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
 
-	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-	//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
-
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY, ARCH>;
 	Layer<P> layer;
-	auto data = encoder::encode_pass_through<P>(input_filename, param);
+	DataStream<P> datastream;
 
-	htm::layer::run_multiple_times(data, layer, param);
+	const bool load_from_file = false;
+	if (load_from_file)
+	{
+		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
+		datastream.load_from_file(input_filename, param);
+	}
+	else
+	{
+		const float sparsity = 0.1f;
+		const int n_sequences = 3;
+		const int sequence_length = 3;
+
+		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
+	}
+	htm::layer::run_multiple_times(datastream, layer, param);
 }
 
 inline void test_2layers()
@@ -124,9 +139,11 @@ inline void test_2layers()
 	Layer<P1> layer1;
 	Layer<P2> layer2;
 
-	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+	DataStream<P1> datastream;
+	datastream.load_from_file(input_filename, param1);
+
 	auto param = std::array<Dynamic_Param, 2>{param1, param2};
-	htm::network::run_multiple_times(data, param, layer1, layer2);
+	htm::network::run_multiple_times(datastream, param, layer1, layer2);
 }
 
 inline void test_3layers()
@@ -227,9 +244,11 @@ inline void test_3layers()
 	Layer<P2> layer2;
 	Layer<P3> layer3;
 
-	auto data = encoder::encode_pass_through<P1>(input_filename, param1);
+	DataStream<P1> datastream;
+	datastream.load_from_file(input_filename, param1);
+
 	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
-	htm::network::run_multiple_times(data, param, layer1, layer2, layer3);
+	htm::network::run_multiple_times(datastream, param, layer1, layer2, layer3);
 }
 
 inline void test_swarm_1layer()
@@ -240,7 +259,6 @@ inline void test_swarm_1layer()
 	const int N_SENSOR_DIM2 = 20;
 	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 	const int N_HIDDEN_SENSORS = 0;
-
 
 	//const int N_BLOCKS = 9; // 1024 columns
 	//const int N_BLOCKS = 4096; // 262144 columns
@@ -281,7 +299,24 @@ inline void test_swarm_1layer()
 
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
 	auto param = std::array<Dynamic_Param, 1>{param1};
-	htm::swarm::run_ga<P>(input_filename, param, options);
+	DataStream<P> datastream;
+
+	const bool load_from_file = false;
+	if (load_from_file)
+	{
+		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
+		datastream.load_from_file(input_filename, param1);
+	}
+	else
+	{
+		const float sparsity = 0.1f;
+		const int n_sequences = 3;
+		const int sequence_length = 3;
+
+		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
+	}
+	htm::swarm::run_ga<P>(datastream, param, options);
 }
 
 inline void test_swarm_2layers()
@@ -338,8 +373,6 @@ inline void test_swarm_2layers()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-
 	using Network_Config = network::network_2Layer<
 		N_VISIBLE_SENSORS_L1,
 		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
@@ -349,7 +382,23 @@ inline void test_swarm_2layers()
 	using P1 = Network_Config::P_L1;
 	using P2 = Network_Config::P_L2;
 	auto param = std::array<Dynamic_Param, 2>{param1, param2};
-	htm::swarm::run_ga<P1, P2>(input_filename, param, options);
+	DataStream<P1> datastream;
+
+	const bool load_from_file = false;
+	if (load_from_file)
+	{
+		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
+		datastream.load_from_file(input_filename, param1);
+	}
+	else
+	{
+		const float sparsity = 0.1f;
+		const int n_sequences = 3;
+		const int sequence_length = 3;
+		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
+	}
+	htm::swarm::run_ga<P1, P2>(datastream, param, options);
 }
 
 inline void test_swarm_3layers()
@@ -410,8 +459,6 @@ inline void test_swarm_3layers()
 	else
 		log_WARNING("swarm:run_ga: could not write to file ", outputfilename, "\n");
 
-	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-
 	using Network_Config = network::network_3Layer<
 		N_VISIBLE_SENSORS_L1,
 		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
@@ -423,7 +470,23 @@ inline void test_swarm_3layers()
 	using P2 = Network_Config::P_L2;
 	using P3 = Network_Config::P_L3;
 	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
-	htm::swarm::run_ga<P1, P2, P3>(input_filename, param, options);
+	DataStream<P1> datastream;
+
+	const bool load_from_file = false;
+	if (load_from_file)
+	{
+		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
+		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
+		datastream.load_from_file(input_filename, param1);
+	}
+	else
+	{
+		const float sparsity = 0.1f;
+		const int n_sequences = 3;
+		const int sequence_length = 3;
+		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
+	}
+	htm::swarm::run_ga<P1, P2, P3>(datastream, param, options);
 }
 
 int main()
@@ -431,8 +494,8 @@ int main()
 	const auto start_time = std::chrono::system_clock::now();
 	if (false) test_1layer();
 	if (false) test_2layers();
-	if (true) test_3layers();
-	if (false) test_swarm_1layer();
+	if (false) test_3layers();
+	if (true) test_swarm_1layer();
 	if (false) test_swarm_2layers();
 	if (false) test_swarm_3layers();
 

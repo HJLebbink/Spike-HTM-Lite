@@ -106,18 +106,21 @@ namespace htm
 			input.close();
 			return data;
 		}
-
+	
 		template <typename P>
-		void get_active_sensors(
-			const int t,
-			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
-			Layer<P>::Active_Sensors& sensor_activity)
+		void add_sensor_noise(
+			Layer<P>::Active_Sensors& active_sensors)
 		{
-			const int time_step_max = static_cast<int>(data.size());
-			const auto i = t % time_step_max;
-			if (false) log_INFO_DEBUG("encoder:fetch_sensor_data: t = ", t, "; time_step_max = ", time_step_max, "; index = ", i, ".\n");
-			
-			copy_partial(sensor_activity, data[i]);
+			if (P::SP_SENSOR_NOISE_PERCENT > 0)
+			{
+				const int range = std::floorf(200.0f / P::SP_SENSOR_NOISE_PERCENT) - 1;
+				int i = random::rand_int32(0, range);
+				while (i < P::N_VISIBLE_SENSORS)
+				{
+					active_sensors.negate(i);
+					i += random::rand_int32(0, range);
+				}
+			}
 		}
 	}
 }

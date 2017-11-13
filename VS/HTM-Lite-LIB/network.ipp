@@ -22,7 +22,7 @@
 #include "types.ipp"
 #include "print.ipp"
 #include "layer.ipp"
-#include "encoder.ipp"
+#include "datastream.ipp"
 
 //Hierarchical Temporal Memory (HTM)
 namespace htm
@@ -33,6 +33,7 @@ namespace htm
 		using namespace ::tools::log;
 		using namespace ::tools::assert;
 		using namespace htm::types;
+		using namespace htm::datastream;
 
 		//HTM layer private methods
 		namespace priv
@@ -148,7 +149,7 @@ namespace htm
 
 		template <typename P1, typename P2>
 		int run(
-			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2)
@@ -159,14 +160,14 @@ namespace htm
 
 			for (int time = 0; time < param[0].n_time_steps; ++time)
 			{
-				encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
-				layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
+				datastream.current_sensors(layer1.active_sensors);
+				encoder::add_sensor_noise<P1>(layer1.active_sensors);
 
 				priv::one_step(param, time, layer1, layer2);
 
 				if (param[0].progress_display_interval > 0)
 				{
-					current_mismatch = layer::priv::calc_mismatch(time, param[0], data, layer1);
+					current_mismatch = layer::priv::calc_mismatch(time, param[0], datastream, layer1);
 				}
 				total_mismatch += current_mismatch;
 
@@ -182,7 +183,9 @@ namespace htm
 						mismatch = 0;
 					}
 				}
-				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], data, layer1.active_columns);
+				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], datastream, layer1.active_columns);
+
+				datastream.advance_time();
 			}
 			if (!param[0].quiet) std::cout << std::endl;
 			return total_mismatch;
@@ -191,7 +194,7 @@ namespace htm
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2>
 		int run_multiple_times(
-			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2)
@@ -201,14 +204,14 @@ namespace htm
 			{
 				layer::init(layer1, param[0]);
 				layer::init(layer2, param[1]);
-				mismatch += run(data, param, layer1, layer2);
+				mismatch += run(datastream, param, layer1, layer2);
 			}
 			return mismatch;
 		}
 
 		template <typename P1, typename P2, typename P3>
 		int run(
-			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
@@ -220,14 +223,14 @@ namespace htm
 
 			for (int time = 0; time < param[0].n_time_steps; ++time)
 			{
-				encoder::get_active_sensors<P1>(time, data, layer1.active_sensors);
-				layer::priv::add_sensor_noise<P1>(layer1.active_sensors);
+				datastream.current_sensors(layer1.active_sensors);
+				encoder::add_sensor_noise<P1>(layer1.active_sensors);
 
 				priv::one_step(param, time, layer1, layer2, layer3);
 
 				if (param[0].progress_display_interval > 0)
 				{
-					current_mismatch = layer::priv::calc_mismatch(time, param[0], data, layer1);
+					current_mismatch = layer::priv::calc_mismatch(time, param[0], datastream, layer1);
 				}
 				total_mismatch += current_mismatch;
 
@@ -243,7 +246,9 @@ namespace htm
 						mismatch = 0;
 					}
 				}
-				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], data, layer1.active_columns);
+				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], datastream, layer1.active_columns);
+
+				datastream.advance_time();
 			}
 			if (!param[0].quiet) std::cout << std::endl;
 			return total_mismatch;
@@ -252,7 +257,7 @@ namespace htm
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2, typename P3>
 		int run_multiple_times(
-			const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
@@ -264,7 +269,7 @@ namespace htm
 				layer::init(layer1, param[0]);
 				layer::init(layer2, param[1]);
 				layer::init(layer3, param[2]);
-				mismatch += run(data, param, layer1, layer2, layer3);
+				mismatch += run(datastream, param, layer1, layer2, layer3);
 			}
 			return mismatch;
 		}

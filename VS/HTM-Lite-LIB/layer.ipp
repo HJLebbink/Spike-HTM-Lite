@@ -27,7 +27,7 @@
 #include "tools.ipp"
 #include "types.ipp"
 #include "print.ipp"
-#include "encoder.ipp"
+#include "datastream.ipp"
 #include "sp.ipp"
 #include "tp.ipp"
 
@@ -40,6 +40,7 @@ namespace htm
 		using namespace ::tools::log;
 		using namespace ::tools::assert;
 		using namespace htm::types;
+		using namespace htm::datastream;
 
 		//HTM layer private methods
 		namespace priv
@@ -212,7 +213,7 @@ namespace htm
 			int calc_mismatch(
 				const int t,
 				const Dynamic_Param& param,
-				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+				const DataStream<P>& datastream,
 				const Layer<P>& layer)
 			{
 				Layer<P>::Active_Sensors active_sensors;
@@ -220,7 +221,7 @@ namespace htm
 
 				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
 				get_predicted_sensors::d(layer, sensor_threshold, param, predicted_sensors);
-				encoder::get_active_sensors<P>(t + 1, data, active_sensors);
+				datastream.next_sensors(active_sensors);
 
 				int mismatch = 0;
 				//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
@@ -229,22 +230,6 @@ namespace htm
 					if (predicted_sensors.get(i) != active_sensors.get(i)) mismatch++;
 				}
 				return mismatch;
-			}
-
-			template <typename P>
-			void add_sensor_noise(
-				Layer<P>::Active_Sensors& active_sensors)
-			{
-				if (P::SP_SENSOR_NOISE_PERCENT > 0)
-				{
-					const int RAND_PERCENT = P::SP_SENSOR_NOISE_PERCENT;
-					int i = random::rand_int32(1, 200 * RAND_PERCENT);
-					while (i < P::N_VISIBLE_SENSORS)
-					{
-						active_sensors.negate(i);
-						i += random::rand_int32(1, 200 * RAND_PERCENT);;
-					}
-				}
 			}
 
 			template <typename P>
@@ -280,7 +265,7 @@ namespace htm
 				const int t,
 				const Layer<P>& layer,
 				const Dynamic_Param& param,
-				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+				const DataStream<P>& datastream,
 				const Layer<P>::Active_Columns& active_columns)
 			{
 				const int progress_frequency = 1;
@@ -295,7 +280,7 @@ namespace htm
 						std::cout << "=====" << std::endl;
 
 						get_predicted_sensors::d(layer, sensor_threshold, param, active_visible_sensors);
-						encoder::get_active_sensors<P>(t + 1, data, active_sensors);
+						datastream.next_sensors(active_sensors);
 
 						std::cout << "at t = " << t << ": predicted sensor activity at (future) t = " << (t + 1) << ":" << std::endl;
 						std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
@@ -439,7 +424,7 @@ namespace htm
 		//Run the provided layer once, update steps as provided in param
 		template <typename P>
 		int run(
-			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+			const DataStream<P>& datastream,
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
@@ -449,13 +434,13 @@ namespace htm
 
 			for (int time = 0; time < param.n_time_steps; ++time)
 			{
-				encoder::get_active_sensors<P>(time, data, layer.active_sensors);
-				priv::add_sensor_noise<P>(layer.active_sensors);
+				datastream.current_sensors(layer.active_sensors);
+				encoder::add_sensor_noise<P>(layer.active_sensors);
 				one_step(layer.active_sensors, layer, time, param);
 
 				if (param.progress_display_interval > 0)
 				{
-					current_mismatch = priv::calc_mismatch(time, param, data, layer);
+					current_mismatch = priv::calc_mismatch(time, param, datastream, layer);
 				}
 				total_mismatch += current_mismatch;
 
@@ -471,7 +456,9 @@ namespace htm
 						mismatch = 0;
 					}
 				}
-				if (param.progress) priv::show_progress(time, layer, param, data, layer.active_columns);
+				if (param.progress) priv::show_progress(time, layer, param, datastream, layer.active_columns);
+
+				datastream.advance_time();
 			}
 			if (!param.quiet) std::cout << std::endl;
 			return total_mismatch;
@@ -480,7 +467,7 @@ namespace htm
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P>
 		int run_multiple_times(
-			const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+			const DataStream<P>& datastream,
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
@@ -488,7 +475,8 @@ namespace htm
 			for (auto i = 0; i < param.n_times; ++i)
 			{
 				init(layer, param);
-				mismatch += run(data, layer, param);
+				datastream.reset_time();
+				mismatch += run(datastream, layer, param);
 			}
 			return mismatch;
 		}

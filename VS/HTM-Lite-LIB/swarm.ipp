@@ -30,6 +30,7 @@
 
 #include "parameters.ipp"
 #include "types.ipp"
+#include "datastream.ipp"
 #include "layer.ipp"
 
 namespace htm
@@ -37,6 +38,7 @@ namespace htm
 	namespace swarm
 	{
 		using namespace htm::types;
+		using namespace htm::datastream;
 
 		struct Swarm_Options
 		{
@@ -323,7 +325,7 @@ namespace htm
 
 			template <typename P>
 			void do_work(
-				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+				const DataStream<P>& datastream,
 				Layer<P>& layer,
 				Swarm_Options& options,
 				Configuration<1>& result)
@@ -333,7 +335,7 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 
 					htm::layer::init(layer, result.param[0]);
-					const int total_mismatch = htm::layer::run(data, layer, result.param[0]);
+					const int total_mismatch = htm::layer::run(datastream, layer, result.param[0]);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
@@ -347,7 +349,7 @@ namespace htm
 
 			template <typename P1, typename P2>
 			void do_work(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				const DataStream<P1>& datastream,
 				Layer<P1>& layer1,
 				Layer<P2>& layer2,
 				const Swarm_Options& options,
@@ -359,7 +361,7 @@ namespace htm
 
 					htm::layer::init(layer1, result.get_param(0));
 					htm::layer::init(layer2, result.get_param(1));
-					const int total_mismatch = htm::network::run(data, result.param, layer1, layer2);
+					const int total_mismatch = htm::network::run(datastream, result.param, layer1, layer2);
 
 					if (result.mismatch != Configuration<2>::MISMATCH_INVALID)
 					{
@@ -373,7 +375,7 @@ namespace htm
 
 			template <typename P1, typename P2, typename P3>
 			void do_work(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				const DataStream<P1>& datastream,
 				Layer<P1>& layer1,
 				Layer<P2>& layer2,
 				Layer<P3>& layer3,
@@ -387,7 +389,7 @@ namespace htm
 					htm::layer::init(layer1, result.get_param(0));
 					htm::layer::init(layer2, result.get_param(1));
 					htm::layer::init(layer3, result.get_param(2));
-					const int total_mismatch = htm::network::run(data, result.param, layer1, layer2, layer3);
+					const int total_mismatch = htm::network::run(datastream, result.param, layer1, layer2, layer3);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
@@ -401,7 +403,7 @@ namespace htm
 
 			template <typename P>
 			void do_work_all(
-				const std::vector<Layer<P>::Active_Visible_Sensors>& data,
+				const DataStream<P>& datastream,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration<1>>& results)
@@ -409,13 +411,13 @@ namespace htm
 				Layer<P> layer;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(data, layer, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(data, layer, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer, options, results[i]);
 			}
 
 			template <typename P1, typename P2>
 			void do_work_all(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				const DataStream<P1>& datastream,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration<2>>& results)
@@ -424,13 +426,13 @@ namespace htm
 				Layer<P2> layer2;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(data, layer1, layer2, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(data, layer1, layer2, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1, layer2, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1, layer2, options, results[i]);
 			}
 
 			template <typename P1, typename P2, typename P3>
 			void do_work_all(
-				const std::vector<Layer<P1>::Active_Visible_Sensors>& data,
+				const DataStream<P1>& datastream,
 				const int start_pos,
 				Swarm_Options& options,
 				std::vector<Configuration<3>>& results)
@@ -440,14 +442,14 @@ namespace htm
 				Layer<P3> layer3;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(data, layer1, layer2, layer3, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(data, layer1, layer2, layer3, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1, layer2, layer3, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1, layer2, layer3, options, results[i]);
 			}
 		}
 
 		template <typename P>
 		std::vector<Configuration<1>> run_random(
-			const std::string& input_filename,
+			const DataStream<P>& datastream,
 			const std::array<Dynamic_Param, 1>& param,
 			Swarm_Options& options)
 		{
@@ -465,12 +467,10 @@ namespace htm
 				results.push_back(priv::random_config(param, random_engine));
 			}
 
-			const auto data = encoder::encode_pass_through<P>(input_filename, param[0]);
-
 			std::vector<std::thread> workers;
 			for (int thread = 0; thread < nThreads; ++thread)
 			{
-				workers.push_back(std::thread(priv::do_work_all<P>, data, thread * 4, std::ref(options), std::ref(results)));
+				workers.push_back(std::thread(priv::do_work_all<P>, datastream, thread * 4, std::ref(options), std::ref(results)));
 			}
 			for (auto& t : workers) if (t.joinable()) t.join();
 			return results;
@@ -478,7 +478,7 @@ namespace htm
 
 		template <typename P>
 		std::vector<Configuration<1>> run_ga(
-			const std::string& input_filename,
+			const DataStream<P>& datastream,
 			const std::array<Dynamic_Param, 1>& param,
 			Swarm_Options& options)
 		{
@@ -492,9 +492,7 @@ namespace htm
 			std::default_random_engine random_engine(r());
 			std::uniform_int_distribution<int> individual_dist(0, options.population_size-1);
 
-			const auto data = encoder::encode_pass_through<P>(input_filename, param[0]);
-
-			std::vector<Configuration<1>> pool = run_random<P>(input_filename, param, options);
+			std::vector<Configuration<1>> pool = run_random<P>(datastream, param, options);
 			std::vector<Configuration<1>> results;
 			std::vector<std::thread> workers;
 
@@ -521,7 +519,7 @@ namespace htm
 				workers.clear();
 				for (int thread = 0; thread < nThreads; ++thread)
 				{
-					workers.push_back(std::thread(priv::do_work_all<P>, data, thread * 4, std::ref(options), std::ref(results)));
+					workers.push_back(std::thread(priv::do_work_all<P>, datastream, thread * 4, std::ref(options), std::ref(results)));
 				}
 				for (auto& t : workers) if (t.joinable()) t.join();
 				for (const auto& config : results) pool.push_back(config);
@@ -531,7 +529,7 @@ namespace htm
 		
 		template <typename P1, typename P2>
 		std::vector<Configuration<2>> run_ga(
-			const std::string& input_filename,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
 			Swarm_Options& options)
 		{
@@ -544,8 +542,6 @@ namespace htm
 			std::random_device r;
 			std::default_random_engine random_engine(r());
 			std::uniform_int_distribution<int> individual_dist(0, options.population_size - 1);
-
-			const auto data = encoder::encode_pass_through<P1>(input_filename, param[0]);
 
 			std::vector<Configuration<2>> pool;// = run_random<P1>(input_filename, param, options);
 			std::vector<Configuration<2>> results;
@@ -574,7 +570,7 @@ namespace htm
 				workers.clear();
 				for (int thread = 0; thread < nThreads; ++thread)
 				{
-					workers.push_back(std::thread(priv::do_work_all<P1, P2>, data, thread * 4, std::ref(options), std::ref(results)));
+					workers.push_back(std::thread(priv::do_work_all<P1, P2>, datastream, thread * 4, std::ref(options), std::ref(results)));
 				}
 				for (auto& t : workers) if (t.joinable()) t.join();
 				for (const auto& config : results) pool.push_back(config);
@@ -584,7 +580,7 @@ namespace htm
 		
 		template <typename P1, typename P2, typename P3>
 		std::vector<Configuration<3>> run_ga(
-			const std::string& input_filename,
+			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param, 
 			Swarm_Options& options)
 		{
@@ -597,8 +593,6 @@ namespace htm
 			std::random_device r;
 			std::default_random_engine random_engine(r());
 			std::uniform_int_distribution<int> individual_dist(0, options.population_size - 1);
-
-			const auto data = encoder::encode_pass_through<P1>(input_filename, param[0]);
 
 			std::vector<Configuration<3>> pool;// = run_random<P1>(input_filename, param, options);
 			std::vector<Configuration<3>> results;
@@ -627,7 +621,7 @@ namespace htm
 				workers.clear();
 				for (int thread = 0; thread < nThreads; ++thread)
 				{
-					workers.push_back(std::thread(priv::do_work_all<P1, P2, P3>, data, thread * 4, std::ref(options), std::ref(results)));
+					workers.push_back(std::thread(priv::do_work_all<P1, P2, P3>, datastream, thread * 4, std::ref(options), std::ref(results)));
 				}
 				for (auto& t : workers) if (t.joinable()) t.join();
 				for (const auto& config : results) pool.push_back(config);

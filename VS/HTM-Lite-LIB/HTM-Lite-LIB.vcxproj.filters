@@ -34,6 +34,9 @@
     <None Include="parameters.ipp">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="datastream.ipp">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="types.ipp">

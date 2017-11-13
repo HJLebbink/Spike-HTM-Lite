@@ -613,7 +613,7 @@ namespace htm
 			using Active_Segments = History<Segments_Set, 2>;
 			using Matching_Segments = History<Segments_Set, 2>;
 
-			//Pseudo random number used only by this column.
+			//Pseudo random number used only by the column.
 			std::vector<unsigned int> random_number;
 
 
