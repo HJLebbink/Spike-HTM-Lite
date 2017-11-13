@@ -10,9 +10,6 @@
     <None Include="sp.ipp">
       <Filter>Header Files</Filter>
     </None>
-    <None Include="constants.ipp">
-      <Filter>Header Files</Filter>
-    </None>
     <None Include="tp.ipp">
       <Filter>Header Files</Filter>
     </None>
@@ -32,6 +29,9 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="network.ipp">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="parameters.ipp">
       <Filter>Header Files</Filter>
     </None>
   </ItemGroup>

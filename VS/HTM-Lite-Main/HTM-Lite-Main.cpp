@@ -21,7 +21,7 @@
 #include "..\Spike-Tools-Lib\timing.ipp"
 #include "..\Spike-Tools-Lib\profiler.ipp"
 
-#include "..\HTM-Lite-LIB\constants.ipp"
+#include "..\HTM-Lite-LIB\parameters.ipp"
 #include "..\HTM-Lite-LIB\types.ipp"
 #include "..\HTM-Lite-LIB\layer.ipp"
 #include "..\HTM-Lite-LIB\swarm.ipp"

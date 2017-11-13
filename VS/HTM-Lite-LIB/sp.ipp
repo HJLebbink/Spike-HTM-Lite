@@ -26,7 +26,7 @@
 #include "..\Spike-Tools-Lib\log.ipp"
 #include "..\Spike-Tools-Lib\assert.ipp"
 
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "print.ipp"
 #include "types.ipp"
 
@@ -711,8 +711,8 @@ namespace htm
 
 			template <typename P>
 			void update_boost_factors(
-				const Layer<P>& layer,
-				Column<P>& column,
+				Layer<P>& layer,
+				const int column_i,
 				const Dynamic_Param& param,
 				const float active_duty_cycle)
 			{
@@ -726,8 +726,8 @@ namespace htm
 				{
 					const float target_desity = param.SP_LOCAL_AREA_DENSITY;
 					const float new_boost_factor = exp((target_desity - active_duty_cycle) * P::SP_BOOST_STRENGTH);
-					if (false) log_INFO_DEBUG("SP:update_boost_factors: column ", column.id, "; old boost factor ", column.boost_factor, "; new boost factor ", new_boost_factor, ".\n");
-					column.boost_factor = new_boost_factor;
+					if (false) log_INFO_DEBUG("SP:update_boost_factors: column ", column_i, "; old boost factor ", layer.boost_factor[column_i], "; new boost factor ", new_boost_factor, ".\n");
+					layer.boost_factor[column_i] = new_boost_factor;
 				}
 				else
 				{
@@ -844,12 +844,11 @@ namespace htm
 			//#pragma ivdep // ignore write after write dependency in rand_float
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 			{
-				auto& column = layer[column_i];
 				const int overlap = overlap_local[column_i];
 
 				//add a small random number seems to improve learning speed
-				const float r = random::rand_float(0.1f, column.random_number);
-				boosted_overlap_local[column_i] = ((LEARN) ? (overlap * column.boost_factor) : overlap) + r;
+				const float r = random::rand_float(0.1f, layer.random_number[column_i]);
+				boosted_overlap_local[column_i] = ((LEARN) ? (overlap * layer.boost_factor[column_i]) : overlap) + r;
 			}
 
 			#if _DEBUG
@@ -867,9 +866,8 @@ namespace htm
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						auto& column = layer[column_i];
 						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns.get(column_i));
-						priv::update_boost_factors(layer, column, param, layer.sp_active_duty_cycles[column_i]);
+						priv::update_boost_factors(layer, column_i, param, layer.sp_active_duty_cycles[column_i]);
 					}
 					if (false)
 					{

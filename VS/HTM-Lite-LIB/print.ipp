@@ -21,7 +21,7 @@
 #include <iomanip>      // std::setw
 #include <sstream>      // std::stringstream
 
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "tools.ipp"
 #include "types.ipp"
 
@@ -301,12 +301,11 @@ namespace htm
 			int column_i = 0;
 			while (column_i < P::N_COLUMNS)
 			{
-				const auto& column = layer[column_i];
 				for (int i1 = 0; i1 < width; ++i1)
 				{
 					if (column_i < P::N_COLUMNS)
 					{
-						result << " " << std::fixed << std::setprecision(3) << column.boost_factor;
+						result << " " << std::fixed << std::setprecision(3) << layer.boost_factor[column_i];
 					}
 					column_i++;
 				}
@@ -317,18 +316,19 @@ namespace htm
 
 		template <typename P>
 		std::string print_dd_synapses(
-			const Column<P>& column)
+			const Layer<P>& layer,
+			const int column_i)
 		{
 			std::ostringstream result;
-			const auto n_segments = column.dd_segment_count;
+			const auto n_segments = layer.dd_segment_count[column_i];
 
 			for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
 			{
-				const auto n_synapses = column.dd_synapse_count[segment_i];
-				const auto& dd_synapse_permanence_segment = column.dd_synapse_permanence[segment_i];
-				const auto& dd_synapse_delay_origin_segment = column.dd_synapse_delay_origin[segment_i];
+				const auto n_synapses = layer.dd_synapse_count[column_i][segment_i];
+				const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
+				const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
 
-				result << "Column " << std::setw(4) << column.id << ": segment " << segment_i << "/ " << n_segments << ": permanence:";
+				result << "Column " << std::setw(4) << column_i << ": segment " << segment_i << "/ " << n_segments << ": permanence:";
 				for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)
 				{
 					result << " " << std::fixed << std::setprecision(3) << dd_synapse_permanence_segment[synapse_i];
@@ -337,7 +337,7 @@ namespace htm
 
 				if (true)
 				{
-					result << "Column " << std::setw(4) << column.id << ": segment " << segment_i << "/ " << n_segments << ": cell org  :";
+					result << "Column " << std::setw(4) << column_i << ": segment " << segment_i << "/ " << n_segments << ": cell org  :";
 					for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)
 					{
 						const auto delay_and_cell_id = dd_synapse_delay_origin_segment[synapse_i];
@@ -356,8 +356,7 @@ namespace htm
 			std::ostringstream result;
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 			{
-				const auto& column = layer[column_i];
-				if (column.dd_segment_count > 0) result << print_dd_synapses(column);
+				if (layer.dd_segment_count[column_i] > 0) result << print_dd_synapses(layer, column_i);
 			}
 			return result.str();
 		}

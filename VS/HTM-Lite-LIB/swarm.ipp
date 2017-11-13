@@ -28,7 +28,7 @@
 
 #include "..\Spike-Tools-Lib\log.ipp"
 
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "types.ipp"
 #include "layer.ipp"
 

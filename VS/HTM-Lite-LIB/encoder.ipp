@@ -24,7 +24,7 @@
 #include "..\Spike-Tools-Lib\log.ipp"
 
 #include "tools.ipp"
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "types.ipp"
 
 namespace htm

@@ -25,7 +25,7 @@
 
 #include "..\Spike-Tools-Lib\assert.ipp"
 
-#include "constants.ipp"
+#include "parameters.ipp"
 
 namespace htm
 {

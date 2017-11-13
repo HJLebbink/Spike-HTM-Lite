@@ -111,7 +111,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="constants.ipp" />
+    <None Include="parameters.ipp" />
     <None Include="encoder.ipp" />
     <None Include="layer.ipp" />
     <None Include="network.ipp" />

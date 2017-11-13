@@ -23,7 +23,7 @@
 #include <array>
 #include <vector>
 
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "tools.ipp"
 #include "types.ipp"
 #include "print.ipp"
@@ -65,8 +65,7 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const auto& column = layer[column_i];
-							predicted_columns.set(column_i, column.active_dd_segments.any_current());
+							predicted_columns.set(column_i, layer.active_dd_segments[column_i].any_current());
 						}
 
 						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
@@ -159,8 +158,7 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const auto& column = layer[column_i];
-							const bool column_is_predicted = column.active_dd_segments.any_current();
+							const bool column_is_predicted = layer.active_dd_segments[column_i].any_current();
 							if (column_is_predicted)
 							{
 								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
@@ -365,11 +363,9 @@ namespace htm
 				}
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
-						auto& column = layer.data[column_i];
-						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, column.random_number);
+						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, layer.random_number[column_i]);
 
 						auto& destination = layer.sp_pd_destination_column_is[random_sensor];
 						auto& permanence = layer.sp_pd_synapse_permanence_is[random_sensor];
@@ -393,35 +389,33 @@ namespace htm
 			{
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-					auto& column = layer.data[column_i];
 					auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_ic[column_i];
 					auto& synapse_permanence = layer.sp_pd_synapse_permanence_ic[column_i];
+					unsigned int random_number = layer.random_number[column_i];
 
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
-						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, column.random_number);
+						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, random_number);
 						synapse_origin[synapse_i] = random_sensor;
 						synapse_permanence[synapse_i] = param.SP_PD_PERMANENCE_INIT;
 					}
+					layer.random_number[column_i] = random_number;
 				}
 			}
 
 			//init permanence values
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 			{
-				auto& column = layer.data[column_i];
-				column.id = column_i;
-
 				// reset dd synapses
-				column.dd_segment_count = 0;
-				column.dd_synapse_count.clear();
-				column.dd_synapse_permanence.clear();
-				column.dd_synapse_delay_origin.clear();
-				column.dd_synapse_active_time.clear();
+				layer.dd_segment_count[column_i] = 0;
+				layer.dd_synapse_count[column_i].clear();
+				layer.dd_synapse_permanence[column_i].clear();
+				layer.dd_synapse_delay_origin[column_i].clear();
+				layer.dd_synapse_active_time[column_i].clear();
 
 				// reset activity
-				column.active_dd_segments.reset();
-				column.matching_dd_segments.reset();
+				layer.active_dd_segments[column_i].reset();
+				layer.matching_dd_segments[column_i].reset();
 			}
 
 			// reset global state

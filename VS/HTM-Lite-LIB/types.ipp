@@ -20,7 +20,7 @@
 
 #include "..\Spike-Tools-LIB\assert.ipp"
 
-#include "constants.ipp"
+#include "parameters.ipp"
 #include "tools.ipp"
 
 namespace htm
@@ -602,49 +602,6 @@ namespace htm
 		};
 
 		//========================================================================
-		// Column structure with data that is used only by the column.
-		template <typename P>
-		struct Column
-		{
-			using Active_Segments = History<Segments_Set, 2>;
-			using Matching_Segments = History<Segments_Set, 2>;
-
-			//The id (and index in layer) of this column.
-			int id;
-
-			//Pseudo random number used only by this column.
-			unsigned int random_number = random::rdrand32();
-
-			//Segments that currently and previously are active.
-			Active_Segments active_dd_segments;
-
-			//Segments that currently and previously are matching.
-			Matching_Segments matching_dd_segments;
-
-			//Current boost factor.
-			float boost_factor = 1.0;
-
-			//Number of segments this column currently has in use.
-			int dd_segment_count = 0;
-
-			//Cell to which this segment belongs to.
-			std::vector<int8_t> dd_segment_destination = std::vector<int8_t>(0);
-
-			//Permanence of the synapses of the the provided segment index.
-			std::vector<std::vector<Permanence>> dd_synapse_permanence = std::vector<std::vector<Permanence>>(0);
-
-			//Originating cell id of the synapses of the provided segment index.
-			std::vector<std::vector<int>> dd_synapse_delay_origin = std::vector<std::vector<int>>(0);
-
-			//Number of synapses this column currently has in use; this int is smaller than TP_N_DD_SYNAPSES.
-			std::vector<int> dd_synapse_count = std::vector<int>(0);
-
-			//Last time step synapse was active.
-			std::vector<int> dd_synapse_active_time = std::vector<int>(0);
-		};
-
-
-		//========================================================================
 		template <typename P>
 		struct Layer
 		{
@@ -653,11 +610,45 @@ namespace htm
 			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
 			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
 			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
+			using Active_Segments = History<Segments_Set, 2>;
+			using Matching_Segments = History<Segments_Set, 2>;
 
-			std::vector<Column<P>> data;
+			//Pseudo random number used only by this column.
+			std::vector<unsigned int> random_number;
+
 
 			Active_Cells active_cells; //32MB for 1M columns times History
 			Winner_Cells winner_cells;
+
+			//Segments that currently and previously are active.
+			std::vector<Active_Segments> active_dd_segments = std::vector<Active_Segments>(P::N_COLUMNS);
+
+			//Segments that currently and previously are matching.
+			std::vector<Matching_Segments> matching_dd_segments = std::vector<Matching_Segments>(P::N_COLUMNS);
+
+			//Number of segments this column currently has in use.
+			std::vector<int> dd_segment_count = std::vector<int>(P::N_COLUMNS);
+
+			//Cell to which this segment belongs to.
+			std::vector<std::vector<int8_t>> dd_segment_destination = std::vector<std::vector<int8_t>>(P::N_COLUMNS);
+
+			//Last time step synapse was active.
+			std::vector<std::vector<int>> dd_synapse_active_time = std::vector<std::vector<int>>(P::N_COLUMNS);
+
+
+
+			using t5 = std::vector<std::vector<Permanence, priv::Allocator>>;
+			//Permanence of the synapses of the the provided segment index.
+			std::vector<t5> dd_synapse_permanence = std::vector<t5>(P::N_COLUMNS);
+
+			using t6 = std::vector<std::vector<int, priv::Allocator>>;
+			//Originating cell id of the synapses of the provided segment index.
+			std::vector<t6> dd_synapse_delay_origin = std::vector<t6>(P::N_COLUMNS);
+
+			//Number of synapses this column currently has in use; this int is smaller than TP_N_DD_SYNAPSES.
+			std::vector<std::vector<int>> dd_synapse_count = std::vector<std::vector<int>>(P::N_COLUMNS);
+
+
 
 			#pragma region Used by SP only
 			//Number of iterations.
@@ -666,6 +657,8 @@ namespace htm
 			//Number of iterations while learning.
 			int iteration_learn_num = 0;
 
+			//Current boost factor.
+			std::vector<float> boost_factor = std::vector<float>(P::N_COLUMNS, 1.0f);
 
 			#pragma region iterate over sensors
 			using t1 = std::vector<Permanence, priv::Allocator>;
@@ -707,7 +700,9 @@ namespace htm
 			// default constructor
 			Layer()
 			{
-				this->data.resize(P::N_COLUMNS);
+				this->random_number = std::vector<unsigned int>(P::N_COLUMNS);
+				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
+
 
 				if (P::SP_INDEXED_BY_SENSOR)
 				{
@@ -720,15 +715,6 @@ namespace htm
 					this->sp_pd_synapse_permanence_ic = std::vector<t1>(P::N_COLUMNS, t1(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD));
 					this->sp_pd_synapse_origin_sensor_ic = std::vector<t2>(P::N_COLUMNS, t2(P::SP_N_PD_SYNAPSES, P::SP_PD_SYNAPSE_ORIGIN_INVALID));
 				}
-			}
-
-			Column<P>& operator[] (int i)
-			{
-				return this->data[i];
-			}
-			const Column<P>& operator[] (int i) const
-			{
-				return this->data[i];
 			}
 		};
 
