@@ -639,14 +639,14 @@ namespace htm
 
 			using t5 = std::vector<std::vector<Permanence, priv::Allocator>>;
 			//Permanence of the synapses of the the provided segment index.
-			std::vector<t5> dd_synapse_permanence = std::vector<t5>(P::N_COLUMNS);
+			std::vector<t5> dd_synapse_permanence_sf = std::vector<t5>(P::N_COLUMNS);
 
 			using t6 = std::vector<std::vector<int, priv::Allocator>>;
 			//Originating cell id of the synapses of the provided segment index.
-			std::vector<t6> dd_synapse_delay_origin = std::vector<t6>(P::N_COLUMNS);
+			std::vector<t6> dd_synapse_delay_origin_sf = std::vector<t6>(P::N_COLUMNS);
 
 			//Number of synapses this column currently has in use; this int is smaller than TP_N_DD_SYNAPSES.
-			std::vector<std::vector<int>> dd_synapse_count = std::vector<std::vector<int>>(P::N_COLUMNS);
+			std::vector<std::vector<int>> dd_synapse_count_sf = std::vector<std::vector<int>>(P::N_COLUMNS);
 
 
 

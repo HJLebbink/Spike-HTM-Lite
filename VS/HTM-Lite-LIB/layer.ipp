@@ -393,9 +393,9 @@ namespace htm
 			{
 				// reset dd synapses
 				layer.dd_segment_count[column_i] = 0;
-				layer.dd_synapse_count[column_i].clear();
-				layer.dd_synapse_permanence[column_i].clear();
-				layer.dd_synapse_delay_origin[column_i].clear();
+				layer.dd_synapse_count_sf[column_i].clear();
+				layer.dd_synapse_permanence_sf[column_i].clear();
+				layer.dd_synapse_delay_origin_sf[column_i].clear();
 				layer.dd_synapse_active_time[column_i].clear();
 
 				// reset activity

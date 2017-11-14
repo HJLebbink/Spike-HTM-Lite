@@ -324,9 +324,9 @@ namespace htm
 
 			for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
 			{
-				const auto n_synapses = layer.dd_synapse_count[column_i][segment_i];
-				const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
-				const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
+				const auto n_synapses = layer.dd_synapse_count_sf[column_i][segment_i];
+				const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
+				const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
 
 				result << "Column " << std::setw(4) << column_i << ": segment " << segment_i << "/ " << n_segments << ": permanence:";
 				for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)

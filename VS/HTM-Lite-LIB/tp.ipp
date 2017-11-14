@@ -69,8 +69,8 @@ namespace htm
 
 					unsigned int random_number = layer.random_number[column_i];
 
-					const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
-					const auto n_synapses = layer.dd_synapse_count[column_i][segment_i];
+					const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
+					const auto n_synapses = layer.dd_synapse_count_sf[column_i][segment_i];
 
 					int selected_cells_count = 0;
 					int winner_cell_i = 0;
@@ -147,10 +147,10 @@ namespace htm
 						const Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
-						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
-						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
+						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
+						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
 
-						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count[column_i][segment_i]; ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
 						{
 							const auto delay_cell_id = dd_synapse_delay_origin_segment[synapse_i];
 							const int global_cell_id = get_global_cell_id(delay_cell_id);
@@ -169,10 +169,10 @@ namespace htm
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
-						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
-						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
+						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
+						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
 						
-						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count[column_i][segment_i]; ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
 						{
 							const Permanence old_permanence = dd_synapse_permanence_segment[synapse_i];
 							if (old_permanence > P::TP_DD_CONNECTED_THRESHOLD)
@@ -221,22 +221,22 @@ namespace htm
 						std::vector<Permanence, types::priv::Allocator> permanence_ref;
 						if (compare_to_ref)
 						{
-							permanence_org = layer.dd_synapse_permanence[column_i][segment_i];
+							permanence_org = layer.dd_synapse_permanence_sf[column_i][segment_i];
 							adapt_segment_ref(layer, column_i, segment_i, active_cells, permanence_inc, permanence_dec);
-							permanence_ref = layer.dd_synapse_permanence[column_i][segment_i];
-							layer.dd_synapse_permanence[column_i][segment_i] = permanence_org;
+							permanence_ref = layer.dd_synapse_permanence_sf[column_i][segment_i];
+							layer.dd_synapse_permanence_sf[column_i][segment_i] = permanence_org;
 						}
 						#endif
 
-						auto permanence_epi8_ptr = reinterpret_cast<__m512i *>(layer.dd_synapse_permanence[column_i][segment_i].data());
-						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_delay_origin[column_i][segment_i].data());
+						auto permanence_epi8_ptr = reinterpret_cast<__m512i *>(layer.dd_synapse_permanence_sf[column_i][segment_i].data());
+						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_delay_origin_sf[column_i][segment_i].data());
 						auto active_cells_ptr = active_cells.data();
 
 						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
 						const __m512i inc_epi8 = _mm512_set1_epi8(permanence_inc);
 						const __m512i dec_epi8 = _mm512_set1_epi8(-permanence_dec);
 
-						const int n_blocks = tools::n_blocks_64(layer.dd_synapse_count[column_i][segment_i]);
+						const int n_blocks = tools::n_blocks_64(layer.dd_synapse_count_sf[column_i][segment_i]);
 
 						for (int block = 0; block < n_blocks; ++block)
 						{
@@ -261,9 +261,9 @@ namespace htm
 						#if _DEBUG
 						if (compare_to_ref)
 						{
-							const auto& permanence_avx512 = layer.dd_synapse_permanence[column_i][segment_i];
+							const auto& permanence_avx512 = layer.dd_synapse_permanence_sf[column_i][segment_i];
 
-							for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count[column_i][segment_i]; ++synapse_i)
+							for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
 							{
 								if (permanence_ref[synapse_i] != permanence_avx512[synapse_i])
 								{
@@ -322,11 +322,11 @@ namespace htm
 
 						if (n_desired_new_synapses <= 0) return; // nothing to do
 
-						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
-						auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
+						auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
+						auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
 						assert_msg(dd_synapse_permanence_segment.size() == dd_synapse_delay_origin_segment.size(), "TP:grow_DD_synapses_ref: bug A.");
 
-						const int old_size = layer.dd_synapse_count[column_i][segment_i];
+						const int old_size = layer.dd_synapse_count_sf[column_i][segment_i];
 
 						//find indices that will be overwritten with new values
 						std::vector<int> indices_to_update = std::vector<int>(n_desired_new_synapses, -1);
@@ -385,7 +385,7 @@ namespace htm
 									dd_synapse_permanence_segment.resize(htm::tools::multiple_64(new_size), P::TP_DD_CONNECTED_THRESHOLD);
 									dd_synapse_delay_origin_segment.resize(htm::tools::multiple_64(new_size), P::TP_DD_SYNAPSE_ORIGIN_INVALID);
 								}
-								layer.dd_synapse_count[column_i][segment_i] = new_size;
+								layer.dd_synapse_count_sf[column_i][segment_i] = new_size;
 
 								assert_msg(new_size <= dd_synapse_permanence_segment.size(), "TP:grow_DD_synapses_ref: invalid new_size=", new_size, "; while dd_synapse_permanence_segment.size()=", dd_synapse_permanence_segment.size());
 								assert_msg(new_size <= dd_synapse_delay_origin_segment.size(), "TP:grow_DD_synapses_ref: invalid new_size=", new_size, "; while dd_synapse_origin_segment.size()=", dd_synapse_delay_origin_segment.size());
@@ -414,7 +414,7 @@ namespace htm
 						}
 
 						#if _DEBUG
-						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count[column_i][segment_i]; ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
 						{
 							const auto origin = get_global_cell_id(dd_synapse_delay_origin_segment[synapse_i]);
 							assert_msg(origin >= 0, "TP:grow_DD_synapses_ref: invalid origin ", origin);
@@ -504,9 +504,9 @@ namespace htm
 				{
 					if (n_desired_new_synapses <= 0) return; // nothing to do
 
-					auto& synapse_permanence = layer.dd_synapse_permanence[column_i];
-					auto& synapse_delay_origin = layer.dd_synapse_delay_origin[column_i];
-					auto& synapse_count = layer.dd_synapse_count[column_i];
+					auto& synapse_permanence = layer.dd_synapse_permanence_sf[column_i];
+					auto& synapse_delay_origin = layer.dd_synapse_delay_origin_sf[column_i];
+					auto& synapse_count = layer.dd_synapse_count_sf[column_i];
 
 
 					int new_segment_i = -1;
@@ -799,13 +799,14 @@ namespace htm
 						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
-						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
+						const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
+						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
+						const int n_synpases = layer.dd_synapse_count_sf[column_i][segment_i];
 
 						int n_potential_synapses = 0;
 						int n_active_synapses = 0;
 
-						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count[column_i][segment_i]; ++synapse_i)
+						for (auto synapse_i = 0; synapse_i < n_synpases; ++synapse_i)
 						{
 							const Permanence permanence = dd_synapse_permanence_segment[synapse_i];
 							if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
@@ -859,8 +860,8 @@ namespace htm
 						const Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_permanence[column_i][segment_i].data());
-						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_delay_origin[column_i][segment_i].data());
+						auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_permanence_sf[column_i][segment_i].data());
+						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_delay_origin_sf[column_i][segment_i].data());
 						auto active_cells_ptr = active_cells.data();
 						
 						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
@@ -869,7 +870,7 @@ namespace htm
 						__m512i n_potential_synapses = _mm512_setzero_si512();
 						__m512i n_active_synapses = _mm512_setzero_si512();
 
-						const int n_synapses = layer.dd_synapse_count[column_i][segment_i];
+						const int n_synapses = layer.dd_synapse_count_sf[column_i][segment_i];
 						const int n_blocks = htm::tools::n_blocks_64(n_synapses);
 
 						for (int block = 0; block < n_blocks; ++block)
@@ -925,11 +926,11 @@ namespace htm
 						#if _DEBUG
 						if (true)
 						{
-							const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence[column_i][segment_i];
-							const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin[column_i][segment_i];
+							const auto& dd_synapse_permanence_segment = layer.dd_synapse_permanence_sf[column_i][segment_i];
+							const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
 
 							// number of synapses in use
-							const auto n_synapses = layer.dd_synapse_count[column_i][segment_i];
+							const auto n_synapses = layer.dd_synapse_count_sf[column_i][segment_i];
 
 							if (false) log_INFO("TP:count_active_potential_DD_synapses: A: column ", column_i, "; segment_i ", segment_i, "; n_synapses = ", n_synapses, ".\n");
 
@@ -962,8 +963,9 @@ namespace htm
 					}
 				}
 			
+				//Activate dendrites: synapse forward reference implementation
 				template <bool LEARN, typename P>
-				void activate_dendrites_ref(
+				void activate_dendrites_sf_ref(
 					Layer<P>& layer,
 					const int time,
 					//in
@@ -974,11 +976,13 @@ namespace htm
 					{
 						auto& active_segments_current = layer.active_dd_segments[column_i].current();
 						auto& matching_segments_current = layer.matching_dd_segments[column_i].current();
+						const int n_segments = layer.dd_segment_count[column_i];
+						auto& active_time = layer.dd_synapse_active_time[column_i];
 
 						active_segments_current.reset();
 						matching_segments_current.reset();
 
-						for (auto segment_i = 0; segment_i < layer.dd_segment_count[column_i]; ++segment_i)
+						for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
 						{
 							const auto tup = count_active_potential_DD_synapses::d(layer, column_i, segment_i, active_cells, param);
 							const int n_active_synapses = std::get<0>(tup);
@@ -991,45 +995,42 @@ namespace htm
 							if (n_active_synapses > param.TP_DD_SEGMENT_ACTIVE_THRESHOLD)
 							{
 								active_segments_current.add(segment_i, n_active_synapses);
-								if (LEARN) layer.dd_synapse_active_time[column_i][segment_i] = time;
+								if (LEARN) active_time[segment_i] = time;
 							}
 						}
 					}
 				}
-
+				//Activate dendrites: synapse backward reference implementation
 				template <bool LEARN, typename P>
-				void activate_dendrites_experiment(
+				void activate_dendrites_sb_ref(
 					Layer<P>& layer,
 					const int time,
 					//in
 					const Layer<P>::Active_Cells& active_cells,
 					const Dynamic_Param& param)
 				{
-					//TODO
-					std::vector<int> active_cells_t1 = std::vector<int>(0);
+					//TODO: investigate whether it is faster to loop over the active cells and determine the synapse activity
 					/*
-					for (int active_cell_id : active_cells_t1)
+					std::vector<int> delay_and_cell_ids = std::vector<int>(0);
+
+					for (int delay_and_cell_id : delay_and_cell_ids)
 					{
-						auto& active_segments_current = layer.active_dd_segments[column_i].current();
-						auto& matching_segments_current = layer.matching_dd_segments[column_i].current();
+						const int global_cell_id = get_global_cell_id(delay_and_cell_id);
+						const int delay = get_delay(delay_and_cell_id) - 1; // can we remove the minus one here: very confusing
 
-						active_segments_current.reset();
-						matching_segments_current.reset();
+						const int n_synapses = layer.dd_synapse_count_sb[delay][global_cell_id];
+						const auto& permanences = layer.dd_synapse_permanence_sb[delay][global_cell_id];
 
-						for (auto segment_i = 0; segment_i < layer.dd_segment_count[column_i]; ++segment_i)
+						for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)
 						{
-							const auto tup = count_active_potential_DD_synapses::d(layer, column_i, segment_i, active_cells, param);
-							const int n_active_synapses = std::get<0>(tup);
-							const int n_potential_synapses = std::get<1>(tup);
+							const Permanence permanence = permanences[synapse_i];
+							if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
+							{
+								int segment_i = 
 
-							if (n_potential_synapses > param.TP_MIN_DD_ACTIVATION_THRESHOLD)
-							{
-								matching_segments_current.add(segment_i, n_potential_synapses);
-							}
-							if (n_active_synapses > param.TP_DD_SEGMENT_ACTIVE_THRESHOLD)
-							{
-								active_segments_current.add(segment_i, n_active_synapses);
-								if (LEARN) layer.dd_synapse_active_time[column_i][segment_i] = time;
+
+								n_potential_synapses++;
+								n_active_synapses += (permanence > param.TP_DD_PERMANENCE_THRESHOLD);
 							}
 						}
 					}
@@ -1044,7 +1045,10 @@ namespace htm
 					const Layer<P>::Active_Cells& active_cells,
 					const Dynamic_Param& param)
 				{
-					activate_dendrites_ref<LEARN, P>(layer, time, active_cells, param);
+					//log_INFO("activate_dendrites_sf_ref: n_active_cells=", active_cells.count(), "; N_CELLS=", P::N_CELLS, "\n");
+
+					if (P::TP_SYNAPSE_FORWARD) activate_dendrites_sf_ref<LEARN, P>(layer, time, active_cells, param);
+					if (!P::TP_SYNAPSE_FORWARD) activate_dendrites_sb_ref<LEARN, P>(layer, time, active_cells, param);
 				}
 			}
 		}
