@@ -660,27 +660,27 @@ namespace htm
 			//Current boost factor.
 			std::vector<float> boost_factor = std::vector<float>(P::N_COLUMNS, 1.0f);
 
-			#pragma region iterate over sensors
+			#pragma region synapse forward
 			using t1 = std::vector<Permanence, priv::Allocator>;
 			//Proximal dendrite synapse permanence: iterate over columns: column pushes
-			std::vector<t1> sp_pd_synapse_permanence_ic;
+			std::vector<t1> sp_pd_synapse_permanence_sf;
 
 			using t2 = std::vector<int, priv::Allocator>;
 			//Proximal dendrite synapse origin cell ID: iterate over columns: column pushes
-			std::vector<t2> sp_pd_synapse_origin_sensor_ic;
+			std::vector<t2> sp_pd_synapse_origin_sensor_sf;
 			#pragma endregion
 
-			#pragma region iterate over columns
+			#pragma region synapse backward
 			using t3 = std::vector<int, priv::Allocator>;
 			//Proximal dendrite synapse origin cell ID: iterate over sensors: sensor pulls
-			std::vector<t3> sp_pd_destination_column_is;
+			std::vector<t3> sp_pd_destination_column_sb;
 
 			using t4 = std::vector<Permanence, priv::Allocator>;
 			//Proximal dendrite synapse permanence: iterate over sensors: sensor pulls
-			std::vector<t4> sp_pd_synapse_permanence_is;
+			std::vector<t4> sp_pd_synapse_permanence_sb;
 
 			//Number of dendrite synapses: iterate over sensors: sensor pulls
-			std::vector<int> sp_pd_synapse_count_is;
+			std::vector<int> sp_pd_synapse_count_sb;
 			#pragma endregion
 
 			//moving average denoting the frequency of column activation: used by boosting
@@ -703,17 +703,16 @@ namespace htm
 				this->random_number = std::vector<unsigned int>(P::N_COLUMNS);
 				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
 
-
-				if (P::SP_INDEXED_BY_SENSOR)
+				if (P::SP_SYNAPSE_FORWARD)
 				{
-					this->sp_pd_destination_column_is = std::vector<t3>(P::N_SENSORS);
-					this->sp_pd_synapse_permanence_is = std::vector<t4>(P::N_SENSORS);
-					this->sp_pd_synapse_count_is = std::vector<int>(P::N_SENSORS);
+					this->sp_pd_synapse_permanence_sf = std::vector<t1>(P::N_COLUMNS, t1(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD));
+					this->sp_pd_synapse_origin_sensor_sf = std::vector<t2>(P::N_COLUMNS, t2(P::SP_N_PD_SYNAPSES, P::SP_PD_SYNAPSE_ORIGIN_INVALID));
 				}
 				else
 				{
-					this->sp_pd_synapse_permanence_ic = std::vector<t1>(P::N_COLUMNS, t1(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD));
-					this->sp_pd_synapse_origin_sensor_ic = std::vector<t2>(P::N_COLUMNS, t2(P::SP_N_PD_SYNAPSES, P::SP_PD_SYNAPSE_ORIGIN_INVALID));
+					this->sp_pd_destination_column_sb = std::vector<t3>(P::N_SENSORS);
+					this->sp_pd_synapse_permanence_sb = std::vector<t4>(P::N_SENSORS);
+					this->sp_pd_synapse_count_sb = std::vector<int>(P::N_SENSORS);
 				}
 			}
 		};

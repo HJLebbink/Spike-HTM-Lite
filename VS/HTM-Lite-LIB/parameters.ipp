@@ -142,7 +142,7 @@ namespace htm
 		static constexpr int SP_SENSOR_NOISE_PERCENT = 0;
 
 		//Whether the spacial pooler pushes 
-		static constexpr bool SP_INDEXED_BY_SENSOR = false;
+		static constexpr bool SP_SYNAPSE_FORWARD = false;
 
 		#pragma endregion
 		//========================================================================
@@ -173,6 +173,8 @@ namespace htm
 
 		static constexpr int TP_DD_SYNAPSE_ORIGIN_INVALID = -3;
 		static constexpr int8_t TP_DD_SEGMENT_DESTINATION_INVALID = -4;
+
+		static constexpr bool TP_SYNAPSE_FORWARD = false;
 
 		#pragma endregion
 		//========================================================================

@@ -113,7 +113,11 @@ namespace htm
 		{
 			if (P::SP_SENSOR_NOISE_PERCENT > 0)
 			{
+				//TODO: intel compiler does not support if-consexpr yet
+				#pragma warning( push )
+				#pragma warning( disable : 39)
 				const int range = std::floorf(200.0f / P::SP_SENSOR_NOISE_PERCENT) - 1;
+				#pragma warning( pop ) 
 				int i = random::rand_int32(0, range);
 				while (i < P::N_VISIBLE_SENSORS)
 				{

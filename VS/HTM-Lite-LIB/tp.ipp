@@ -963,7 +963,7 @@ namespace htm
 				}
 			
 				template <bool LEARN, typename P>
-				void d(
+				void activate_dendrites_ref(
 					Layer<P>& layer,
 					const int time,
 					//in
@@ -995,6 +995,56 @@ namespace htm
 							}
 						}
 					}
+				}
+
+				template <bool LEARN, typename P>
+				void activate_dendrites_experiment(
+					Layer<P>& layer,
+					const int time,
+					//in
+					const Layer<P>::Active_Cells& active_cells,
+					const Dynamic_Param& param)
+				{
+					//TODO
+					std::vector<int> active_cells_t1 = std::vector<int>(0);
+					/*
+					for (int active_cell_id : active_cells_t1)
+					{
+						auto& active_segments_current = layer.active_dd_segments[column_i].current();
+						auto& matching_segments_current = layer.matching_dd_segments[column_i].current();
+
+						active_segments_current.reset();
+						matching_segments_current.reset();
+
+						for (auto segment_i = 0; segment_i < layer.dd_segment_count[column_i]; ++segment_i)
+						{
+							const auto tup = count_active_potential_DD_synapses::d(layer, column_i, segment_i, active_cells, param);
+							const int n_active_synapses = std::get<0>(tup);
+							const int n_potential_synapses = std::get<1>(tup);
+
+							if (n_potential_synapses > param.TP_MIN_DD_ACTIVATION_THRESHOLD)
+							{
+								matching_segments_current.add(segment_i, n_potential_synapses);
+							}
+							if (n_active_synapses > param.TP_DD_SEGMENT_ACTIVE_THRESHOLD)
+							{
+								active_segments_current.add(segment_i, n_active_synapses);
+								if (LEARN) layer.dd_synapse_active_time[column_i][segment_i] = time;
+							}
+						}
+					}
+					*/
+				}
+
+				template <bool LEARN, typename P>
+				void d(
+					Layer<P>& layer,
+					const int time,
+					//in
+					const Layer<P>::Active_Cells& active_cells,
+					const Dynamic_Param& param)
+				{
+					activate_dendrites_ref<LEARN, P>(layer, time, active_cells, param);
 				}
 			}
 		}
