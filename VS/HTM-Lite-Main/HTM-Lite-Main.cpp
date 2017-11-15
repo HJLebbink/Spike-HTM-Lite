@@ -44,7 +44,7 @@ inline void test_1layer()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 10 * 8;
+	const int N_BLOCKS = 1 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
 	const int HISTORY = 8;
@@ -55,17 +55,13 @@ inline void test_1layer()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 300;
-	param1.n_times = 5;
+	param1.n_time_steps = 1000;
+	param1.n_times = 1;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
 	param1.progress = false;
-	param1.progress_display_interval = 20;
-
-	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
-	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
-	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
+	param1.progress_display_interval = 50;
 
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY, ARCH>;
 	Layer<P> layer;
@@ -74,18 +70,21 @@ inline void test_1layer()
 	const bool load_from_file = true;
 	if (load_from_file)
 	{
+		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
+		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
+		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
+
 		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
 		datastream.load_from_file(input_filename, param1);
 	}
 	else
 	{
-		const float sparsity = 0.1f;
-		const int n_sequences = 3;
+		const float sparsity = 0.05f;
+		const int n_sequences = 18;
 		const int sequence_length = 3;
 
 		param1.SP_LOCAL_AREA_DENSITY = 0.01575;
-		param1.SP_PD_PERMANENCE_THRESHOLD = 5;
 		param1.SP_PD_PERMANENCE_INIT = 22;
 		param1.SP_PD_PERMANENCE_INC = 27;
 		param1.SP_PD_PERMANENCE_DEC = 26;
@@ -93,7 +92,6 @@ inline void test_1layer()
 		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 17;
 		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 1;
 		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 41;
-		param1.TP_DD_PERMANENCE_THRESHOLD = 26;
 		param1.TP_DD_PERMANENCE_INC = 17;
 		param1.TP_DD_PERMANENCE_DEC = 5;
 		param1.TP_DD_PREDICTED_SEGMENT_DEC = 5;
@@ -202,7 +200,6 @@ inline void test_3layers()
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 
 	param1.SP_LOCAL_AREA_DENSITY = 0.05963;
-	param1.SP_PD_PERMANENCE_THRESHOLD = 20;
 	param1.SP_PD_PERMANENCE_INIT = 23;
 	param1.SP_PD_PERMANENCE_INC = 8;
 	param1.SP_PD_PERMANENCE_DEC = 30;
@@ -210,13 +207,11 @@ inline void test_3layers()
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 18;
 	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 21;
 	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 38;
-	param1.TP_DD_PERMANENCE_THRESHOLD = 6;
 	param1.TP_DD_PERMANENCE_INC = 26;
 	param1.TP_DD_PERMANENCE_DEC = 21;
 	param1.TP_DD_PREDICTED_SEGMENT_DEC = 7;
 
 	param2.SP_LOCAL_AREA_DENSITY = 0.01196;
-	param2.SP_PD_PERMANENCE_THRESHOLD = 18;
 	param2.SP_PD_PERMANENCE_INIT = 4;
 	param2.SP_PD_PERMANENCE_INC = 5;
 	param2.SP_PD_PERMANENCE_DEC = 1;
@@ -224,13 +219,11 @@ inline void test_3layers()
 	param2.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 21;
 	param2.TP_MIN_DD_ACTIVATION_THRESHOLD = 5;
 	param2.TP_DD_MAX_NEW_SYNAPSE_COUNT = 23;
-	param2.TP_DD_PERMANENCE_THRESHOLD = 25;
 	param2.TP_DD_PERMANENCE_INC = 14;
 	param2.TP_DD_PERMANENCE_DEC = 30;
 	param2.TP_DD_PREDICTED_SEGMENT_DEC = 23;
 
 	param3.SP_LOCAL_AREA_DENSITY = 0.01781;
-	param3.SP_PD_PERMANENCE_THRESHOLD = 11;
 	param3.SP_PD_PERMANENCE_INIT = 25;
 	param3.SP_PD_PERMANENCE_INC = 12;
 	param3.SP_PD_PERMANENCE_DEC = 10;
@@ -238,7 +231,6 @@ inline void test_3layers()
 	param3.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 7;
 	param3.TP_MIN_DD_ACTIVATION_THRESHOLD = 18;
 	param3.TP_DD_MAX_NEW_SYNAPSE_COUNT = 32;
-	param3.TP_DD_PERMANENCE_THRESHOLD = 18;
 	param3.TP_DD_PERMANENCE_INC = 9;
 	param3.TP_DD_PERMANENCE_DEC = 10;
 	param3.TP_DD_PREDICTED_SEGMENT_DEC = 8;
@@ -280,13 +272,13 @@ inline void test_swarm_1layer()
 	const int N_BLOCKS = 4 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 8;
+	const int HISTORY_SIZE = 4;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 1000;
+	param1.n_time_steps = 2000;
 	param1.n_times = 1;
 
 	param1.progress = false;
@@ -324,10 +316,9 @@ inline void test_swarm_1layer()
 	}
 	else
 	{
-		const float sparsity = 0.1f;
-		const int n_sequences = 3;
+		const float sparsity = 0.05f;
+		const int n_sequences = 16;
 		const int sequence_length = 3;
-
 		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
 	}
 	htm::swarm::run_ga<P>(datastream, param, options);

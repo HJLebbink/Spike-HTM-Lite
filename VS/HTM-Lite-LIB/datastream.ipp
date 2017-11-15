@@ -144,6 +144,17 @@ namespace htm
 				}
 				this->reset_time();
 			}
+			bool next_sensors_predictable() const
+			{
+				if (this->use_file_data)
+				{
+					return true;
+				}
+				else
+				{
+					return (this->pos_in_sequence_next != 0);
+				}
+			}
 			void current_sensors(Layer<P>::Active_Sensors& sensor_activity) const
 			{
 				if (this->use_file_data)

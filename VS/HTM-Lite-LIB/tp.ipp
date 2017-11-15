@@ -346,7 +346,7 @@ namespace htm
 
 							if (j < old_size)
 							{
-								if (dd_synapse_permanence_segment[j] <= 0)
+								if (dd_synapse_permanence_segment[j] <= P::TP_DD_CONNECTED_THRESHOLD)
 								{ // recycle synapse with index j
 									indices_to_update[i] = j;
 									i++;
@@ -817,7 +817,7 @@ namespace htm
 								if (active_cells.get(global_cell_id, delay)) // deadly gather here!
 								{
 									n_potential_synapses++;
-									n_active_synapses += (permanence > param.TP_DD_PERMANENCE_THRESHOLD);
+									n_active_synapses += (permanence > P::TP_DD_PERMANENCE_THRESHOLD);
 								}
 							}
 						}
@@ -838,6 +838,32 @@ namespace htm
 						const __m512i pos_in_int = _mm512_slli_epi32(byte_pos_in_int, 3);
 						const __m512i delay_shift = _mm512_add_epi32(delay_epi32, pos_in_int);
 						return _mm512_and_epi32(_mm512_srlv_epi32(sensor_int, delay_shift), _mm512_set1_epi32(1));
+					}
+
+					__m512i get_sensors_epi16(
+						const __mmask16 mask,
+						const __m512i delay_and_origin_1_epi32,
+						const __m512i delay_and_origin_2_epi32,
+						const void * active_sensors_ptr)
+					{
+						/*
+						const __m512i global_cell_id_1 = _mm512_and_epi32(delay_and_origin_1_epi32, _mm512_set1_epi32(0x1FFFFFFF));
+						const __m512i global_cell_id_2 = _mm512_and_epi32(delay_and_origin_2_epi32, _mm512_set1_epi32(0x1FFFFFFF));
+
+						const __m512i shuffle_mask_epi16 = _mm512_set_epi16();
+						const __m512i delay_and_origin_epi16 = _mm512_permutex2var_epi16(delay_and_origin_1_epi32, shuffle_mask_epi16, delay_and_origin_2_epi32);
+						const __m512i byte_pos_in_short = _mm512_and_epi32(delay_and_origin_epi16, _mm512_set1_epi16(0b11));
+						const __m512i delay_epi16 = _mm512_sub_epi16(_mm512_srli_epi16(delay_and_origin_epi16, 16 - 3), _mm512_set1_epi16(1));
+
+						const __m512i int_addr_1 = _mm512_srli_epi32(global_cell_id_1, 2);
+						const __m512i int_addr_2 = _mm512_srli_epi32(global_cell_id_2, 2);
+						const __m512i sensor_int_1 = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr_1, active_sensors_ptr, 4);
+						const __m512i sensor_int_2 = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr_2, active_sensors_ptr, 4);
+						const __m512i pos_in_short = _mm512_slli_epi16(byte_pos_in_short, 4);
+						const __m512i delay_shift = _mm512_add_epi16(delay_epi16, pos_in_int);
+						return _mm512_and_epi32(_mm512_srlv_epi16(sensor_int, delay_shift), _mm512_set1_epi16(1));
+						*/
+						return _mm512_setzero_si512();
 					}
 
 					/*
@@ -865,7 +891,7 @@ namespace htm
 						auto active_cells_ptr = active_cells.data();
 						
 						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
-						const __m512i active_threshold_simd = _mm512_set1_epi8(param.TP_DD_PERMANENCE_THRESHOLD);
+						const __m512i active_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_PERMANENCE_THRESHOLD);
 
 						__m512i n_potential_synapses = _mm512_setzero_si512();
 						__m512i n_active_synapses = _mm512_setzero_si512();
@@ -877,7 +903,7 @@ namespace htm
 						{
 							const __m512i permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
 							const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
-							const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_simd);
+							const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_epi8);
 
 							for (int i = 0; i < 4; ++i)
 							{
@@ -1011,13 +1037,22 @@ namespace htm
 				{
 					//TODO: investigate whether it is faster to loop over the active cells and determine the synapse activity
 					/*
-					std::vector<int> delay_and_cell_ids = std::vector<int>(0);
+					std::vector<std::vector<int>> segment_activity_local;
+					std::vector<std::vector<int>> segment_matching_local;
 
-					for (int delay_and_cell_id : delay_and_cell_ids)
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						const int global_cell_id = get_global_cell_id(delay_and_cell_id);
-						const int delay = get_delay(delay_and_cell_id) - 1; // can we remove the minus one here: very confusing
+						const int n_segments = layer.dd_segment_count[column_i];
+						segment_activity_local.push_back(std::vector<int>(n_segments, 0));
+						segment_matching_local.push_back(std::vector<int>(n_segments, 0));
+					}
 
+
+					std::vector<int> active_cell_ids_t1 = std::vector<int>(0);
+					int delay = 1;
+
+					for (int global_cell_id : active_cell_ids_t1)
+					{
 						const int n_synapses = layer.dd_synapse_count_sb[delay][global_cell_id];
 						const auto& permanences = layer.dd_synapse_permanence_sb[delay][global_cell_id];
 
@@ -1026,11 +1061,12 @@ namespace htm
 							const Permanence permanence = permanences[synapse_i];
 							if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
 							{
+								const int column_i = global_2_local_cell
 								int segment_i = 
 
 
 								n_potential_synapses++;
-								n_active_synapses += (permanence > param.TP_DD_PERMANENCE_THRESHOLD);
+								n_active_synapses += (permanence >= param.TP_DD_PERMANENCE_THRESHOLD);
 							}
 						}
 					}

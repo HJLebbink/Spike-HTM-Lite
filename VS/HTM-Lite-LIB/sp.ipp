@@ -227,7 +227,7 @@ namespace htm
 
 								for (auto i = 0; i < layer.sp_pd_synapse_count_sb[sensor_i]; ++i)
 								{
-									if (permanences[i] > param.SP_PD_PERMANENCE_THRESHOLD)
+									if (permanences[i] > P::SP_PD_PERMANENCE_THRESHOLD)
 									{
 										const auto column_i = destination_columns[i];
 										overlaps[column_i]++; //deadly scatter here!
@@ -262,7 +262,7 @@ namespace htm
 							int overlap = 0;
 							for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 							{
-								if (permanence[synapse_i] > param.SP_PD_PERMANENCE_THRESHOLD)
+								if (permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 								{
 									const auto origin_sensor = synapse_origin[synapse_i];
 									overlap += active_sensors.get(origin_sensor); // deadly gather here!
@@ -318,7 +318,7 @@ namespace htm
 						//out 
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_PERMANENCE_THRESHOLD);
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 						auto active_sensors_ptr = active_sensors.data();
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
@@ -366,7 +366,7 @@ namespace htm
 					{
 						assert_msg(P::N_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_PERMANENCE_THRESHOLD);
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 						std::array<int, 16> t = { 0 };
@@ -421,7 +421,7 @@ namespace htm
 					{
 						assert_msg(P::N_VISIBLE_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(param.SP_PD_PERMANENCE_THRESHOLD);
+						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 						std::array<int, 16> t = { 0 };
@@ -764,7 +764,7 @@ namespace htm
 						const auto column_i = destination[synapse_i];
 						if (overlap_duty_cycle[column_i] < min_overlap_duty_cycle[column_i]) // the provided column is a weak column
 						{
-							if (permanance[synapse_i] < param.SP_PD_PERMANENCE_THRESHOLD)
+							if (permanance[synapse_i] <= P::SP_PD_PERMANENCE_THRESHOLD)
 							{
 								permanance[synapse_i] += param.SP_PD_PERMANENCE_INC_WEAK;
 							}

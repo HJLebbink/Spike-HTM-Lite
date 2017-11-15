@@ -204,7 +204,6 @@ namespace htm
 					Dynamic_Param result(param1);
 					std::uniform_int_distribution<int> bool_dist(0, 1);
 
-					result.SP_PD_PERMANENCE_THRESHOLD = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_THRESHOLD : param2.SP_PD_PERMANENCE_THRESHOLD;
 					result.SP_PD_PERMANENCE_INIT = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_INIT : param2.SP_PD_PERMANENCE_INIT;
 					result.SP_PD_PERMANENCE_INC = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_INC : param2.SP_PD_PERMANENCE_INC;
 					result.SP_PD_PERMANENCE_DEC = (bool_dist(engine) == 1) ? param1.SP_PD_PERMANENCE_DEC : param2.SP_PD_PERMANENCE_DEC;
@@ -215,12 +214,10 @@ namespace htm
 					result.TP_MIN_DD_ACTIVATION_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_MIN_DD_ACTIVATION_THRESHOLD : param2.TP_MIN_DD_ACTIVATION_THRESHOLD;
 					result.TP_DD_MAX_NEW_SYNAPSE_COUNT = (bool_dist(engine) == 1) ? param1.TP_DD_MAX_NEW_SYNAPSE_COUNT : param2.TP_DD_MAX_NEW_SYNAPSE_COUNT;
 
-					result.TP_DD_PERMANENCE_THRESHOLD = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_THRESHOLD : param2.TP_DD_PERMANENCE_THRESHOLD;
 					result.TP_DD_PERMANENCE_INC = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_INC : param2.TP_DD_PERMANENCE_INC;
 					result.TP_DD_PERMANENCE_DEC = (bool_dist(engine) == 1) ? param1.TP_DD_PERMANENCE_DEC : param2.TP_DD_PERMANENCE_DEC;
 					result.TP_DD_PREDICTED_SEGMENT_DEC = (bool_dist(engine) == 1) ? param1.TP_DD_PREDICTED_SEGMENT_DEC : param2.TP_DD_PREDICTED_SEGMENT_DEC;
 
-					mutate_byte(result.SP_PD_PERMANENCE_THRESHOLD, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_INIT, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_INC, 0, 128, mutation_rate, engine);
 					mutate_byte(result.SP_PD_PERMANENCE_DEC, 0, 128, mutation_rate, engine);
@@ -231,7 +228,6 @@ namespace htm
 					mutate_int(result.TP_MIN_DD_ACTIVATION_THRESHOLD, 1, 100, mutation_rate, engine);
 					mutate_int(result.TP_DD_MAX_NEW_SYNAPSE_COUNT, 1, 100, mutation_rate, engine);
 
-					mutate_byte(result.TP_DD_PERMANENCE_THRESHOLD, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PERMANENCE_INC, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PERMANENCE_DEC, 0, 127, mutation_rate, engine);
 					mutate_byte(result.TP_DD_PREDICTED_SEGMENT_DEC, 0, 127, mutation_rate, engine);
@@ -284,7 +280,6 @@ namespace htm
 
 				param.SP_LOCAL_AREA_DENSITY = SP_LOCAL_AREA_DENSITY_dist(engine);
 
-				param.SP_PD_PERMANENCE_THRESHOLD = static_cast<signed char>(SP_PD_PERMANENCE_THRESHOLD_dist(engine));
 				param.SP_PD_PERMANENCE_INIT = static_cast<signed char>(SP_PD_PERMANENCE_INIT_dist(engine));
 				param.SP_PD_PERMANENCE_INC = static_cast<signed char>(SP_PD_PERMANENCE_INC_dist(engine));
 				param.SP_PD_PERMANENCE_DEC = static_cast<signed char>(SP_PD_PERMANENCE_DEC_dist(engine));
@@ -294,7 +289,6 @@ namespace htm
 				param.TP_MIN_DD_ACTIVATION_THRESHOLD = MIN_DD_ACTIVATION_THRESHOLD_dist(engine);
 				param.TP_DD_MAX_NEW_SYNAPSE_COUNT = TP_DD_MAX_NEW_SYNAPSE_COUNT_dist(engine);
 
-				param.TP_DD_PERMANENCE_THRESHOLD = static_cast<signed char>(TP_DD_PERMANENCE_THRESHOLD_dist(engine));
 				param.TP_DD_PERMANENCE_INC = static_cast<signed char>(TP_DD_PERMANENCE_INC_dist(engine));
 				param.TP_DD_PERMANENCE_DEC = static_cast<signed char>(TP_DD_PERMANENCE_DEC_dist(engine));
 				param.TP_DD_PREDICTED_SEGMENT_DEC = static_cast<signed char>(TP_DD_PREDICTED_SEGMENT_DEC_dist(engine));
