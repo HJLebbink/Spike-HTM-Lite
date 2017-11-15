@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "..\Spike-Tools-LIB\assert.ipp"
+#include "..\Spike-Tools-LIB\allocator.ipp"
 
 #include "parameters.ipp"
 #include "tools.ipp"
@@ -31,9 +32,8 @@ namespace htm
 
 		namespace priv
 		{
-			//using Allocator = std::allocator<int>;
-			using Allocator = std::allocator<__m512i>;
-
+			//using Allocator = std::allocator<__m512i>;
+			using Allocator = ::tools::allocator::Allocator_AVX512<__m512i>;
 
 			template <int SIZE> struct basetype {};
 
@@ -116,7 +116,7 @@ namespace htm
 
 			Bitset_Sparse()
 			{
-				this->_data = std::vector<int, priv::Allocator>(0);
+				this->_data;
 			}
 			void set(const std::vector<char>& bitset)
 			{

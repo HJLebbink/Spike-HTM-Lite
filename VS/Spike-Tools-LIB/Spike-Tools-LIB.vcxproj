@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <None Include="allocator.ipp" />
     <None Include="assert.ipp" />
     <None Include="log.ipp" />
     <None Include="profiler.ipp" />
