@@ -190,7 +190,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_active_columns(
-			const Layer<P>::Active_Columns& active_columns,
+			const typename Layer<P>::Active_Columns& active_columns,
 			const int width)
 		{
 			int sum = 0;
@@ -223,7 +223,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_sensor_activity(
-			const Layer<P>::Active_Sensors& sensor_activity,
+			const typename Layer<P>::Active_Sensors& sensor_activity,
 			const int width)
 		{
 			int sum = 0;
@@ -256,8 +256,8 @@ namespace htm
 
 		template <typename P>
 		std::string print_visible_sensor_activity2(
-			const Layer<P>::Active_Visible_Sensors& sensor_activity1,
-			const Layer<P>::Active_Sensors& sensor_activity2,
+			const typename Layer<P>::Active_Visible_Sensors& sensor_activity1,
+			const typename Layer<P>::Active_Sensors& sensor_activity2,
 			const int width)
 		{
 			std::ostringstream result;

@@ -32,8 +32,9 @@ namespace htm
 
 		namespace priv
 		{
-			//using Allocator = std::allocator<__m512i>;
-			using Allocator = ::tools::allocator::Allocator_AVX512<__m512i>;
+			template <typename T>
+			//using Allocator = std::allocator<T>;
+			using Allocator = ::tools::allocator::Allocator_AVX512<T>;
 
 			template <int SIZE> struct basetype {};
 
@@ -112,7 +113,7 @@ namespace htm
 		struct Bitset_Sparse
 		{
 			static constexpr int SIZE = SIZE_IN;
-			std::vector<int, priv::Allocator> _data;
+			std::vector<int, priv::Allocator<int>> _data;
 
 			Bitset_Sparse()
 			{
@@ -302,12 +303,13 @@ namespace htm
 		{
 			static constexpr int SIZE = SIZE_IN;
 			static constexpr int N_BLOCKS = tools::n_blocks_32(SIZE);
-			std::vector<int, priv::Allocator> _data;
+			using t1 = priv::Allocator<int>;
+			std::vector<int, t1> _data;
 
 			// default constructor
 			Bitset_Compact()
 			{
-				this->_data = std::vector<int, priv::Allocator>(N_BLOCKS, 0);
+				this->_data = std::vector<int, t1>(N_BLOCKS, 0);
 			}
 			bool get(int i) const
 			{
@@ -606,8 +608,8 @@ namespace htm
 		struct Layer
 		{
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
-			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
-			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
+			using Winner_Cells = typename History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
+			using Active_Columns = typename Bitset_Compact<P::N_COLUMNS>;
 			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
 			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
 			using Active_Segments = History<Segments_Set, 2>;
@@ -637,11 +639,11 @@ namespace htm
 
 
 
-			using t5 = std::vector<std::vector<Permanence, priv::Allocator>>;
+			using t5 = std::vector<std::vector<Permanence, priv::Allocator<Permanence>>>;
 			//Permanence of the synapses of the the provided segment index.
 			std::vector<t5> dd_synapse_permanence_sf = std::vector<t5>(P::N_COLUMNS);
 
-			using t6 = std::vector<std::vector<int, priv::Allocator>>;
+			using t6 = std::vector<std::vector<int, priv::Allocator<int>>>;
 			//Originating cell id of the synapses of the provided segment index.
 			std::vector<t6> dd_synapse_delay_origin_sf = std::vector<t6>(P::N_COLUMNS);
 
@@ -661,21 +663,21 @@ namespace htm
 			std::vector<float> boost_factor = std::vector<float>(P::N_COLUMNS, 1.0f);
 
 			#pragma region synapse forward
-			using t1 = std::vector<Permanence, priv::Allocator>;
+			using t1 = std::vector<Permanence, priv::Allocator<Permanence>>;
 			//Proximal dendrite synapse permanence: iterate over columns: column pushes
 			std::vector<t1> sp_pd_synapse_permanence_sf;
 
-			using t2 = std::vector<int, priv::Allocator>;
+			using t2 = std::vector<int, priv::Allocator<int>>;
 			//Proximal dendrite synapse origin cell ID: iterate over columns: column pushes
 			std::vector<t2> sp_pd_synapse_origin_sensor_sf;
 			#pragma endregion
 
 			#pragma region synapse backward
-			using t3 = std::vector<int, priv::Allocator>;
+			using t3 = std::vector<int, priv::Allocator<int>>;
 			//Proximal dendrite synapse origin cell ID: iterate over sensors: sensor pulls
 			std::vector<t3> sp_pd_destination_column_sb;
 
-			using t4 = std::vector<Permanence, priv::Allocator>;
+			using t4 = std::vector<Permanence, priv::Allocator<Permanence>>;
 			//Proximal dendrite synapse permanence: iterate over sensors: sensor pulls
 			std::vector<t4> sp_pd_synapse_permanence_sb;
 

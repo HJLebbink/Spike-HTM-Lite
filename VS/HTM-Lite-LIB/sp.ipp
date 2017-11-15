@@ -49,7 +49,7 @@ namespace htm
 				void active_columns_ref1(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Layer<P>::Active_Columns& active_columns)
+					typename Layer<P>::Active_Columns& active_columns)
 				{
 					for (int column_i1 = 0; column_i1 < P::N_COLUMNS; ++column_i1)
 					{
@@ -69,7 +69,7 @@ namespace htm
 				void active_columns_ref2(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Layer<P>::Active_Columns& active_columns)
+					typename Layer<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 
@@ -107,7 +107,7 @@ namespace htm
 				void active_columns_ref3(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Layer<P>::Active_Columns& active_columns)
+					typename Layer<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 					std::vector<float> tmp = std::vector<float>(boosted_overlap);
@@ -151,7 +151,7 @@ namespace htm
 				void active_columns_ref4(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					Layer<P>::Active_Columns& active_columns)
+					typename Layer<P>::Active_Columns& active_columns)
 				{
 					active_columns.clear_all();
 					std::vector<float> boosted_overlap_copy = std::vector<float>(boosted_overlap);
@@ -185,7 +185,7 @@ namespace htm
 				void d(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const Dynamic_Param& param,
-					Layer<P>::Active_Columns& active_columns)
+					typename Layer<P>::Active_Columns& active_columns)
 				{
 					const int inhibition_top = static_cast<int>(P::N_COLUMNS * param.SP_LOCAL_AREA_DENSITY);
 
@@ -214,7 +214,7 @@ namespace htm
 					void calc_overlap_sb_ref(
 						const Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer<P>::Active_Sensors& active_sensors,
 						//out
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -250,7 +250,7 @@ namespace htm
 					void calc_overlap_sf_ref(
 						const Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer<P>::Active_Sensors& active_sensors,
 						//out
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -314,7 +314,7 @@ namespace htm
 					void calc_overlap_sf_avx512(
 						const Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -360,7 +360,7 @@ namespace htm
 					void calc_overlap_avx512_sf_small_epi32(
 						const Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps)
 					{
@@ -415,7 +415,7 @@ namespace htm
 					void calc_overlap_avx512_sf_small_epi16(
 						const Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps)
 					{
@@ -483,7 +483,7 @@ namespace htm
 				void d(
 					const Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Layer<P>::Active_Sensors& active_sensors,
+					const typename Layer<P>::Active_Sensors& active_sensors,
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
@@ -533,8 +533,8 @@ namespace htm
 					void update_synapses_is_ref(
 						Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Columns& active_columns,
-						const Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer<P>::Active_Columns& active_columns,
+						const typename Layer<P>::Active_Sensors& active_sensors)
 					{
 						for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 						{
@@ -563,13 +563,13 @@ namespace htm
 					void update_synapses_is_avx512(
 						Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Columns& active_columns,
-						const Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer<P>::Active_Columns& active_columns,
+						const typename Layer<P>::Active_Sensors& active_sensors)
 					{
 						//TODO: Code has a bug!
 
 						#if _DEBUG
-						using vector_type = std::vector<Permanence, types::priv::Allocator>;
+						using vector_type = std::vector<Permanence, types::priv::Allocator<Permanence>>;
 						auto permanence_org = std::vector<vector_type>(P::N_SENSORS);
 						auto permanence_ref = std::vector<vector_type>(P::N_SENSORS);
 
@@ -634,8 +634,8 @@ namespace htm
 					void update_synapses_ic_ref(
 						Layer<P>& layer,
 						const Dynamic_Param& param,
-						const Layer<P>::Active_Columns& active_columns,
-						const Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer<P>::Active_Columns& active_columns,
+						const typename Layer<P>::Active_Sensors& active_sensors)
 					{
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
@@ -666,8 +666,8 @@ namespace htm
 				void d(
 					Layer<P>& layer,
 					const Dynamic_Param& param,
-					const Layer<P>::Active_Columns& active_columns,
-					const Layer<P>::Active_Sensors& active_sensors)
+					const typename Layer<P>::Active_Columns& active_columns,
+					const typename Layer<P>::Active_Sensors& active_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
@@ -825,11 +825,11 @@ namespace htm
 
 		template <bool LEARN, typename P>
 		void compute_sp(
-			const Layer<P>::Active_Sensors& active_sensors,
+			const typename Layer<P>::Active_Sensors& active_sensors,
 			Layer<P>& layer,
 			const Dynamic_Param& param,
 			//out
-			Layer<P>::Active_Columns& active_columns)
+			typename Layer<P>::Active_Columns& active_columns)
 		{
 			//local variables
 			auto overlap_local = std::vector<int>(P::N_COLUMNS);

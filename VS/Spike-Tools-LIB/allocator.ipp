@@ -21,7 +21,6 @@
 
 #include "log.ipp"
 
-
 namespace tools
 {
 	namespace allocator
@@ -31,8 +30,22 @@ namespace tools
 		{
 			return ((i & 0b111111) == 0) ? i : i + (0b1000000 - (i & 0b111111));
 		}
-
-		template <class T>
+		constexpr int multiple_32(const int i)
+		{
+			return ((i & 0b11111) == 0) ? i : i + (0b100000 - (i & 0b11111));
+		}
+		constexpr int multiple_16(const int i)
+		{
+			return ((i & 0b1111) == 0) ? i : i + (0b10000 - (i & 0b1111));
+		}
+		constexpr int multiple_N(const int i, const int N)
+		{
+			if (N == 16) return multiple_16(i);
+			if (N == 32) return multiple_32(i);
+			if (N == 64) return multiple_64(i);
+			return multiple_64(i);
+		}
+		template <typename T, int ALIGN = 64>
 		class Allocator_AVX512
 		{
 		public:
@@ -62,8 +75,8 @@ namespace tools
 
 			pointer allocate(size_type n, const void *hint = 0)
 			{
-				const int n_bytes = multiple_64(n * sizeof(T));
-				void * ptr = _mm_malloc(n_bytes, 64);
+				const auto n_bytes = multiple_N(static_cast<int>(n) * sizeof(T), ALIGN);
+				void * ptr = _mm_malloc(n_bytes, ALIGN);
 				
 				#if _DEBUG
 				#pragma warning( push )

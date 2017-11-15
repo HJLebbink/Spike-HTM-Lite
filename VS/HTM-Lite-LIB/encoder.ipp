@@ -35,7 +35,7 @@ namespace htm
 		using namespace htm::types;
 
 		template <typename P>
-		std::vector<Layer<P>::Active_Visible_Sensors> encode_pass_through(
+		std::vector<typename Layer<P>::Active_Visible_Sensors> encode_pass_through(
 			const std::string& filename,
 			const Dynamic_Param& param)
 		{
@@ -109,14 +109,14 @@ namespace htm
 	
 		template <typename P>
 		void add_sensor_noise(
-			Layer<P>::Active_Sensors& active_sensors)
+			typename Layer<P>::Active_Sensors& active_sensors)
 		{
 			if (P::SP_SENSOR_NOISE_PERCENT > 0)
 			{
 				//TODO: intel compiler does not support if-consexpr yet
 				#pragma warning( push )
 				#pragma warning( disable : 39)
-				const int range = std::floorf(200.0f / P::SP_SENSOR_NOISE_PERCENT) - 1;
+				const int range = static_cast<int>(std::floorf(200.0f / P::SP_SENSOR_NOISE_PERCENT) - 1);
 				#pragma warning( pop ) 
 				int i = random::rand_int32(0, range);
 				while (i < P::N_VISIBLE_SENSORS)

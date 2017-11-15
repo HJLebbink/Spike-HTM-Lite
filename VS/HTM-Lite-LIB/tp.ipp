@@ -54,7 +54,7 @@ namespace htm
 					Layer<P>& layer, // column cannot be readonly due to the random number generator
 					const int column_i,
 					const int segment_i,
-					const Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer<P>::Winner_Cells& winner_cells,
 					const int select_size,
 					//out
 					std::vector<int>& selected_delay_and_cells) // assumes that selected_cells has sufficient capacity (size >= select_size)
@@ -145,7 +145,7 @@ namespace htm
 						Layer<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
@@ -166,7 +166,7 @@ namespace htm
 						Layer<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -212,14 +212,14 @@ namespace htm
 						Layer<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
 						#if _DEBUG
 						const bool compare_to_ref = true;
-						std::vector<Permanence, types::priv::Allocator> permanence_org;
-						std::vector<Permanence, types::priv::Allocator> permanence_ref;
+						std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_org;
+						std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_ref;
 						if (compare_to_ref)
 						{
 							permanence_org = layer.dd_synapse_permanence_sf[column_i][segment_i];
@@ -280,7 +280,7 @@ namespace htm
 						Layer<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -296,7 +296,7 @@ namespace htm
 						Layer<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						assert_msg(segment_i < layer.dd_segment_count[column_i], "TP:grow_DD_synapses: segment_i=", segment_i, " is too large. dd_segment_count=", layer.dd_segment_count[column_i]);
@@ -314,7 +314,7 @@ namespace htm
 						const int column_i,
 						const int segment_i,
 						const int n_desired_new_synapses,
-						const Layer<P>::Winner_Cells& winner_cells)
+						const typename Layer<P>::Winner_Cells& winner_cells)
 					{
 						#if _DEBUG
 						if (false) log_INFO("TP:grow_DD_synapses_ref: before: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:", print::print_dd_synapses(layer, column_i));
@@ -432,7 +432,7 @@ namespace htm
 						const int column_i,
 						const int segment_i,
 						const int n_desired_new_synapses,
-						const Layer<P>::Winner_Cells& winner_cells)
+						const typename Layer<P>::Winner_Cells& winner_cells)
 					{
 						assert_msg(segment_i < layer.dd_segment_count[column_i], "TP:grow_DD_synapses: segment_i=", segment_i + " is too large. dd_segment_count=", layer.dd_segment_count[column_i]);
 						grow_DD_synapses_ref(layer, column_i, segment_i, n_desired_new_synapses, winner_cells);
@@ -501,7 +501,7 @@ namespace htm
 					const int n_desired_new_synapses,
 					const Dynamic_Param& param,
 					const int8_t cell,
-					const Layer<P>::Winner_Cells& winner_cells)
+					const typename Layer<P>::Winner_Cells& winner_cells)
 				{
 					if (n_desired_new_synapses <= 0) return; // nothing to do
 
@@ -592,8 +592,8 @@ namespace htm
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const Layer<P>::Active_Cells& active_cells,
-					const Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer<P>::Active_Cells& active_cells,
+					const typename Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -642,8 +642,8 @@ namespace htm
 					const int column_i,
 					const Dynamic_Param& param,
 					//in
-					const Layer<P>::Active_Cells& active_cells,
-					const Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer<P>::Active_Cells& active_cells,
+					const typename Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -678,7 +678,7 @@ namespace htm
 					Layer<P>& layer,
 					const int column_i,
 					const Dynamic_Param& param,
-					const Layer<P>::Active_Cells& active_cells)
+					const typename Layer<P>::Active_Cells& active_cells)
 				{
 					//if (param.TP_DD_PREDICTED_SEGMENT_DEC > 0.0)
 					{
@@ -699,8 +699,8 @@ namespace htm
 					const Dynamic_Param& param,
 					//in
 					const bool is_active_column,
-					const Layer<P>::Active_Cells& active_cells,
-					const Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer<P>::Active_Cells& active_cells,
+					const typename Layer<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -755,10 +755,10 @@ namespace htm
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const Layer<P>::Active_Columns& active_columns,
+					const typename Layer<P>::Active_Columns& active_columns,
 					//inout
-					Layer<P>::Active_Cells& active_cells,
-					Layer<P>::Winner_Cells& winner_cells)
+					typename Layer<P>::Active_Cells& active_cells,
+					typename Layer<P>::Winner_Cells& winner_cells)
 				{
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> active_cells_all_2D;
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> winner_cells_all_2D;
@@ -855,7 +855,7 @@ namespace htm
 						Layer<P>& layer,
 						const int time,
 						//in
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
@@ -914,7 +914,7 @@ namespace htm
 						Layer<P>& layer,
 						const int time,
 						//in
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
@@ -935,7 +935,7 @@ namespace htm
 
 							const auto active_cells_ptr = active_cells.data();
 
-							#pragma ivdep aligned
+							#pragma ivdep
 							for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
 							{
 								auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(permanence_segment[segment_i].data());
@@ -950,9 +950,11 @@ namespace htm
 								#pragma ivdep
 								for (int block = 0; block < n_blocks; ++block)
 								{
-									const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]);
-									//const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]);
+									const void * ptr = &permanence_epi8_ptr[block];
+									//const __m512i permanence_epi8 = _mm512_stream_load_si512(ptr);
+									const __m512i permanence_epi8 = _mm512_load_si512(ptr);
 									//const __m512i permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
+
 									const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
 									const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_epi8);
 
@@ -999,7 +1001,7 @@ namespace htm
 						Layer<P>& layer,
 						const int time,
 						//in
-						const Layer<P>::Active_Cells& active_cells,
+						const typename Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						//TODO: investigate whether it is faster to loop over the active cells and determine the synapse activity
@@ -1046,7 +1048,7 @@ namespace htm
 					Layer<P>& layer,
 					const int time,
 					//in
-					const Layer<P>::Active_Cells& active_cells,
+					const typename Layer<P>::Active_Cells& active_cells,
 					const Dynamic_Param& param)
 				{
 					//log_INFO("activate_dendrites_sf_ref: n_active_cells=", active_cells.count(), "; N_CELLS=", P::N_CELLS, "\n");
@@ -1074,10 +1076,10 @@ namespace htm
 			const int time,
 			const Dynamic_Param& param,
 			//in
-			const Layer<P>::Active_Columns& active_columns,
+			const typename Layer<P>::Active_Columns& active_columns,
 			// inout
-			Layer<P>::Active_Cells& active_cells,
-			Layer<P>::Winner_Cells& winner_cells)
+			typename Layer<P>::Active_Cells& active_cells,
+			typename Layer<P>::Winner_Cells& winner_cells)
 		{
 			#if _DEBUG
 			//if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));

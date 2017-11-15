@@ -116,7 +116,7 @@
       <OptimizationDiagnosticLevel>Disable</OptimizationDiagnosticLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseFullPaths>true</UseFullPaths>
-      <AdditionalOptions>/Qstd=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4068</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,7 +166,7 @@
       <EnableAnsiAliasing>true</EnableAnsiAliasing>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseFullPaths>true</UseFullPaths>
-      <AdditionalOptions>/Qstd=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4068</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

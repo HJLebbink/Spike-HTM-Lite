@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <iomanip>      // std::setw
 
-#include <immintrin.h> // _may_i_use_cpu_feature
+//#include <immintrin.h> // _may_i_use_cpu_feature
+#include <intrin.h>
+
 
 #include "..\Spike-Tools-Lib\log.ipp"
 #include "..\Spike-Tools-Lib\random.ipp"
@@ -45,11 +47,16 @@ namespace htm
 
 	arch_t architecture_switch(const arch_t arch)
 	{
-		switch (arch)
+		if (arch == arch_t::X64) return arch_t::X64;
+		if (arch == arch_t::AVX512) return arch_t::AVX512;
+		if (arch == arch_t::RUNTIME)
 		{
-			case arch_t::X64: return arch_t::X64;
-			case arch_t::AVX512: return arch_t::AVX512;
-			default: return (_may_i_use_cpu_feature(_FEATURE_AVX512F) == 1) ? arch_t::AVX512 : arch_t::X64;
+			#if __INTEL_COMPILER
+			return (_may_i_use_cpu_feature(_FEATURE_AVX512F) == 1) ? arch_t::AVX512 : arch_t::X64;
+			#else
+			log_WARNING("architecture_switch: could not determine desired architecture at runtime: assuming AVX512.\n");
+			return arch_t::AVX512;
+			#endif
 		}
 	}
 

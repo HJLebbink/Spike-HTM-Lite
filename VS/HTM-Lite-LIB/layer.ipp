@@ -58,7 +58,7 @@ namespace htm
 						const int sensor_threshold,
 						const Dynamic_Param& param,
 						//out
-						Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
@@ -104,7 +104,7 @@ namespace htm
 						const int sensor_threshold,
 						const Dynamic_Param& param,
 						//out
-						Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
@@ -153,7 +153,7 @@ namespace htm
 						const int sensor_threshold,
 						const Dynamic_Param& param,
 						//out
-						Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
@@ -194,7 +194,7 @@ namespace htm
 					const int sensor_threshold,
 					const Dynamic_Param& param,
 					//out
-					Layer<P>::Active_Visible_Sensors& predicted_sensors)
+					typename Layer<P>::Active_Visible_Sensors& predicted_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
@@ -239,7 +239,7 @@ namespace htm
 			void load_inferred_sensor_activity(
 				const Layer<P>& layer,
 				const Dynamic_Param& param,
-				const Layer<P>::Active_Columns& active_columns,
+				const typename Layer<P>::Active_Columns& active_columns,
 				// out
 				std::vector<int>& inferred_sensor_activity)
 			{
@@ -269,7 +269,7 @@ namespace htm
 				const Layer<P>& layer,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
-				const Layer<P>::Active_Columns& active_columns)
+				const typename Layer<P>::Active_Columns& active_columns)
 			{
 				const int progress_frequency = 1;
 				const int sensor_threshold = 1;
@@ -304,7 +304,7 @@ namespace htm
 
 			template <bool LEARN, typename P>
 			void one_step(
-				const Layer<P>::Active_Sensors& active_sensors,
+				const typename Layer<P>::Active_Sensors& active_sensors,
 				Layer<P>& layer,
 				const int time,
 				const Dynamic_Param& param)
@@ -413,7 +413,7 @@ namespace htm
 
 		template <typename P>
 		void one_step(
-			const Layer<P>::Active_Sensors& active_sensors,
+			const typename Layer<P>::Active_Sensors& active_sensors,
 			Layer<P>& layer,
 			const int time,
 			const Dynamic_Param& param)

@@ -36,7 +36,7 @@ namespace htm
 		{
 		private:
 
-			using data_type = Layer<P>::Active_Visible_Sensors;
+			using data_type = typename Layer<P>::Active_Visible_Sensors;
 
 			bool use_file_data = false;
 
@@ -58,7 +58,7 @@ namespace htm
 				data_type result;
 				result.clear_all();
 
-				const int range = std::floorf(2.0f / sparcity)-1;
+				const int range = static_cast<int>(std::floorf(2.0f / sparcity) - 1);
 
 				int i = random::rand_int32(0, range, random_number);
 				while (i < P::N_VISIBLE_SENSORS)
@@ -155,7 +155,7 @@ namespace htm
 					return (this->pos_in_sequence_next != 0);
 				}
 			}
-			void current_sensors(Layer<P>::Active_Sensors& sensor_activity) const
+			void current_sensors(typename Layer<P>::Active_Sensors& sensor_activity) const
 			{
 				if (this->use_file_data)
 				{
@@ -168,7 +168,7 @@ namespace htm
 					copy_partial(sensor_activity, this->sequences[this->sequence_i][this->pos_in_sequence]);
 				}
 			}
-			void next_sensors(Layer<P>::Active_Sensors& sensor_activity) const
+			void next_sensors(typename Layer<P>::Active_Sensors& sensor_activity) const
 			{
 				if (this->use_file_data)
 				{
