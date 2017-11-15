@@ -799,6 +799,20 @@ namespace htm
 							const void * active_sensors_ptr)
 						{
 							const __m512i global_cell_id = _mm512_and_epi32(delay_and_origin_epi32, _mm512_set1_epi32(0x1FFFFFFF));
+							const __m512i delay_epi32 = _mm512_sub_epi32(_mm512_srli_epi32(delay_and_origin_epi32, 32 - 3), _mm512_set1_epi32(1));
+
+							const __m512i byte_addr = global_cell_id;
+							const __m512i sensor_int = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, byte_addr, active_sensors_ptr, 1); //bug here! reading 3bytes past array
+							return _mm512_and_epi32(_mm512_srlv_epi32(sensor_int, delay_epi32), _mm512_set1_epi32(1));
+						}
+
+						//Identical to get_sensors_epi32 but without the bug, but that bug does not seem to be a issue.
+						__m512i get_sensors_epi32_B(
+							const __mmask16 mask,
+							const __m512i delay_and_origin_epi32,
+							const void * active_sensors_ptr)
+						{
+							const __m512i global_cell_id = _mm512_and_epi32(delay_and_origin_epi32, _mm512_set1_epi32(0x1FFFFFFF));
 							const __m512i byte_pos_in_int = _mm512_and_epi32(delay_and_origin_epi32, _mm512_set1_epi32(0b11));
 							const __m512i delay_epi32 = _mm512_sub_epi32(_mm512_srli_epi32(delay_and_origin_epi32, 32 - 3), _mm512_set1_epi32(1));
 
@@ -809,31 +823,6 @@ namespace htm
 							return _mm512_and_epi32(_mm512_srlv_epi32(sensor_int, delay_shift), _mm512_set1_epi32(1));
 						}
 
-						__m512i get_sensors_epi16(
-							const __mmask16 mask,
-							const __m512i delay_and_origin_1_epi32,
-							const __m512i delay_and_origin_2_epi32,
-							const void * active_sensors_ptr)
-						{
-							/*
-							const __m512i global_cell_id_1 = _mm512_and_epi32(delay_and_origin_1_epi32, _mm512_set1_epi32(0x1FFFFFFF));
-							const __m512i global_cell_id_2 = _mm512_and_epi32(delay_and_origin_2_epi32, _mm512_set1_epi32(0x1FFFFFFF));
-
-							const __m512i shuffle_mask_epi16 = _mm512_set_epi16();
-							const __m512i delay_and_origin_epi16 = _mm512_permutex2var_epi16(delay_and_origin_1_epi32, shuffle_mask_epi16, delay_and_origin_2_epi32);
-							const __m512i byte_pos_in_short = _mm512_and_epi32(delay_and_origin_epi16, _mm512_set1_epi16(0b11));
-							const __m512i delay_epi16 = _mm512_sub_epi16(_mm512_srli_epi16(delay_and_origin_epi16, 16 - 3), _mm512_set1_epi16(1));
-
-							const __m512i int_addr_1 = _mm512_srli_epi32(global_cell_id_1, 2);
-							const __m512i int_addr_2 = _mm512_srli_epi32(global_cell_id_2, 2);
-							const __m512i sensor_int_1 = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr_1, active_sensors_ptr, 4);
-							const __m512i sensor_int_2 = _mm512_mask_i32gather_epi32(_mm512_setzero_epi32(), mask, int_addr_2, active_sensors_ptr, 4);
-							const __m512i pos_in_short = _mm512_slli_epi16(byte_pos_in_short, 4);
-							const __m512i delay_shift = _mm512_add_epi16(delay_epi16, pos_in_int);
-							return _mm512_and_epi32(_mm512_srlv_epi16(sensor_int, delay_shift), _mm512_set1_epi16(1));
-							*/
-							return _mm512_setzero_si512();
-						}
 
 						/*
 						L1 Data cache = 32 KB, 64 B / line, 8-WAY.
@@ -950,13 +939,14 @@ namespace htm
 								#pragma ivdep
 								for (int block = 0; block < n_blocks; ++block)
 								{
-									const void * ptr = &permanence_epi8_ptr[block];
-									//const __m512i permanence_epi8 = _mm512_stream_load_si512(ptr);
-									const __m512i permanence_epi8 = _mm512_load_si512(ptr);
-									//const __m512i permanence_epi8 = permanence_epi8_ptr[block]; //load 64 permanence values
+									const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
+									//const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 
 									const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
 									const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_epi8);
+
+									//_mm512_cmp
+
 
 									#pragma ivdep // assumed vector dependencies are ignored
 									for (int i = 0; i < 4; ++i)
@@ -966,7 +956,8 @@ namespace htm
 										{
 											//const __m512i delay_origin = _mm512_stream_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
 											const __m512i delay_origin = _mm512_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
-											const __m512i sensors_epi32 = priv::get_sensors_epi32(connected_mask_16, delay_origin, active_cells_ptr);
+
+											const __m512i sensors_epi32 = priv::get_sensors_epi32_B(connected_mask_16, delay_origin, active_cells_ptr);
 											n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
 											const __mmask16 active_mask_16 = static_cast<__mmask16>(active_mask_64 >> (i * 16));
 											n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
@@ -1004,16 +995,16 @@ namespace htm
 						const typename Layer<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						//TODO: investigate whether it is faster to loop over the active cells and determine the synapse activity
+						//TODO: investigate whether it is faster to loop over the active cells and determine the synapsic activity
 						/*
 						std::vector<std::vector<int>> segment_activity_local;
 						std::vector<std::vector<int>> segment_matching_local;
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-						const int n_segments = layer.dd_segment_count[column_i];
-						segment_activity_local.push_back(std::vector<int>(n_segments, 0));
-						segment_matching_local.push_back(std::vector<int>(n_segments, 0));
+							const int n_segments = layer.dd_segment_count[column_i];
+							segment_activity_local.push_back(std::vector<int>(n_segments, 0));
+							segment_matching_local.push_back(std::vector<int>(n_segments, 0));
 						}
 
 
@@ -1022,22 +1013,22 @@ namespace htm
 
 						for (int global_cell_id : active_cell_ids_t1)
 						{
-						const int n_synapses = layer.dd_synapse_count_sb[delay][global_cell_id];
-						const auto& permanences = layer.dd_synapse_permanence_sb[delay][global_cell_id];
+							const int n_synapses = layer.dd_synapse_count_sb[delay][global_cell_id];
+							const auto& permanences = layer.dd_synapse_permanence_sb[delay][global_cell_id];
 
-						for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)
-						{
-						const Permanence permanence = permanences[synapse_i];
-						if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
-						{
-						const int column_i = global_2_local_cell
-						int segment_i =
+							for (auto synapse_i = 0; synapse_i < n_synapses; ++synapse_i)
+							{
+								const Permanence permanence = permanences[synapse_i];
+								if (permanence > P::TP_DD_CONNECTED_THRESHOLD)
+								{
+									const int column_i = global_2_local_cell
+										int segment_i =
 
 
-						n_potential_synapses++;
-						n_active_synapses += (permanence >= param.TP_DD_PERMANENCE_THRESHOLD);
-						}
-						}
+										n_potential_synapses++;
+									n_active_synapses += (permanence >= param.TP_DD_PERMANENCE_THRESHOLD);
+								}
+							}
 						}
 						*/
 					}
@@ -1097,7 +1088,7 @@ namespace htm
 				winner_cells);
 
 			#if _DEBUG
-			//if (false) log_INFO("TP:compute_tp: active_cells current: time = ", time, ":", print::print_active_cells(active_cells.current()));
+			//if (true) log_INFO("TP:compute_tp: active_cells current: time = ", time, ":", print::print_active_cells<P>(active_cells));
 			//if (false) log_INFO("TP:compute_tp: winner_cells current: time = ", time, ":", print::print_active_cells(winner_cells.current()));
 			#endif
 

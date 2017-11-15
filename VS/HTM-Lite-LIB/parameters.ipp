@@ -58,6 +58,7 @@ namespace htm
 			return arch_t::AVX512;
 			#endif
 		}
+		return arch_t::X64;
 	}
 
 	using Permanence = int8_t; // = signed char
