@@ -365,6 +365,13 @@ namespace htm
 		{
 			std::vector<uint64_t> _data;
 
+			//default constructor
+			Segments_Set() = default;
+			//copy constructor
+			Segments_Set(const Segments_Set& other)
+			{
+				this->_data = other._data;
+			}
 			int count() const
 			{
 				return static_cast<int>(this->_data.size());
@@ -400,7 +407,6 @@ namespace htm
 				}
 				return std::make_tuple(best_matching_segment, best_segment_activity);
 			}
-
 			void reset()
 			{
 				this->_data.clear();

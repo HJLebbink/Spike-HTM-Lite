@@ -189,6 +189,58 @@ namespace htm
 		}
 
 		template <typename P>
+		std::string print_active_cells(
+			const typename Layer<P>::Active_Cells& cells)
+		{
+			const int delay = 0;
+
+			Bitset<P::N_COLUMNS> columns_local;
+			columns_local.reset();
+			std::ostringstream result;
+
+			int n_active_cells = 0;
+
+			for (auto global_cell_id = 0; global_cell_id < P::N_CELLS; ++global_cell_id)
+			{
+				if (cells.get(global_cell_id, delay))
+				{
+					const auto tup = tools::global_2_local_cell<P::N_COLUMNS, P::N_BITS_CELL>(global_cell_id);
+					const auto column_i = std::get<1>(tup);
+					columns_local[column_i] = true;
+					n_active_cells++;
+				}
+			}
+			const auto n_columns = columns_local.count();
+
+			result << " [n_columns = " << n_columns << ", n_cells = " << n_active_cells << "]:" << std::endl;
+
+			if (n_columns > 0)
+			{
+				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+				{
+					if (columns_local[column_i]) result << std::setw(5) << column_i;
+				}
+				result << "\n";
+				for (auto cell_i = 0; cell_i < P::N_CELLS_PC; ++cell_i)
+				{
+					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					{
+						if (columns_local[column_i])
+						{
+							const auto global_cell_id = tools::local_2_global_cell<P::N_BITS_CELL>(cell_i, column_i);
+
+							result << ((cells.get(global_cell_id, delay)) ? "    X" : "    .");
+						}
+					}
+					result << "\n";
+				}
+			}
+			return result.str();
+		}
+
+
+
+		template <typename P>
 		std::string print_active_columns(
 			const typename Layer<P>::Active_Columns& active_columns,
 			const int width)

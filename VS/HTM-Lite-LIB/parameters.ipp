@@ -109,9 +109,9 @@ namespace htm
 		static constexpr Permanence SP_PD_PERMANENCE_THRESHOLD = -1;
 
 		//This is a number specifying the minimum number of synapses that must be
-		//on in order for a columns to turn ON.The purpose of this is to prevent
+		//on in order for a columns to turn ON. The purpose of this is to prevent
 		//noise input from activating columns.
-		static constexpr int SP_STIMULUS_THRESHOLD = 0;
+		static constexpr int SP_STIMULUS_THRESHOLD = 1;
 
 		//If true, then during inhibition phase the winning columns are selected as
 		//the most active columns from the region as a whole.Otherwise, the winning
@@ -153,7 +153,7 @@ namespace htm
 		//Percentage of noise added to sensors; use zero for no noise.
 		static constexpr int SP_SENSOR_NOISE_PERCENT = 1;
 
-		//Whether the spacial pooler pushes 
+		//Whether the spacial pooler is computed in a forward fashion 
 		static constexpr bool SP_SYNAPSE_FORWARD = true;
 
 		#pragma endregion
@@ -173,9 +173,6 @@ namespace htm
 
 		//If the permanence value for a synapse is LARGER (NOT EQUAL) than this value, the synapse is said to be active. (negative values are not connected)
 		static constexpr Permanence TP_DD_PERMANENCE_THRESHOLD = -1;
-
-		//Initial permanence of a new synapse.
-		static constexpr Permanence TP_DD_PERMANENCE_INIT = 9;
 
 		//If a permanence is LARGER (NOT EQUAL) than this value, the synapse is said to be connected (but not yet active).
 		static constexpr Permanence TP_DD_CONNECTED_THRESHOLD = -128;
@@ -218,9 +215,10 @@ namespace htm
 		bool quiet = false;
 
 
-
 		int n_visible_sensors_dim1 = 20;
 		int n_visible_sensors_dim2 = 20;
+
+		#pragma region Spacial Pooler stuff
 
 		//Initial permanence of a new synapse
 		Permanence SP_PD_PERMANENCE_INIT = 1;
@@ -241,7 +239,9 @@ namespace htm
 		//at most N columns remain ON within a local inhibition area, where
 		//N = localAreaDensity * (total number of columns in inhibition area).
 		float SP_LOCAL_AREA_DENSITY = 0.05f;
+		#pragma endregion
 
+		#pragma region Temporal Pooler stuff
 		//If the number of active connected synapses on a segment is at least
 		//this threshold, the segment is said to be active.
 		int TP_DD_SEGMENT_ACTIVE_THRESHOLD = 8;
@@ -256,6 +256,9 @@ namespace htm
 		//The maximum number of synapses added to a segment during learning.
 		int TP_DD_MAX_NEW_SYNAPSE_COUNT = 16;
 
+		//Initial permanence of a new synapse.
+		Permanence TP_DD_PERMANENCE_INIT = 10;
+
 		//Amount by which permanences of synapses are incremented during learning.
 		Permanence TP_DD_PERMANENCE_INC = 20;
 
@@ -269,6 +272,8 @@ namespace htm
 		//like 4 % * 0.01 = 0.0004).
 		Permanence TP_DD_PREDICTED_SEGMENT_DEC = 10; // 10 * SP_LOCAL_AREA_DENSITY * TP_DD_PERMANENCE_INC;
 
+		#pragma endregion
+
 		static std::string header_str()
 		{
 			std::ostringstream result;
@@ -280,14 +285,15 @@ namespace htm
 			result << "SP_PD_PERMANENCE_DEC\t";
 			result << "SP_PD_PERMANENCE_INC_WEAK\t";
 
+			result << "TP_DD_PERMANENCE_INIT\t";
+			result << "TP_DD_PERMANENCE_INC\t";
+			result << "TP_DD_PERMANENCE_DEC\t";
+			result << "TP_DD_PREDICTED_SEGMENT_DEC";
+
 			result << "TP_DD_SEGMENT_ACTIVE_THRESHOLD\t";
 			result << "TP_MIN_DD_ACTIVATION_THRESHOLD\t";
 			result << "TP_DD_MAX_NEW_SYNAPSE_COUNT\t";
 
-			result << "TP_DD_PERMANENCE_THRESHOLD\t";
-			result << "TP_DD_PERMANENCE_INC\t";
-			result << "TP_DD_PERMANENCE_DEC\t";
-			result << "TP_DD_PREDICTED_SEGMENT_DEC";
 			return result.str();
 		}
 
@@ -301,13 +307,15 @@ namespace htm
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_DEC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->SP_PD_PERMANENCE_INC_WEAK) << "\t";
 
-			result << std::setw(2) << this->TP_DD_SEGMENT_ACTIVE_THRESHOLD << "\t";
-			result << std::setw(2) << this->TP_MIN_DD_ACTIVATION_THRESHOLD << "\t";
-			result << std::setw(2) << this->TP_DD_MAX_NEW_SYNAPSE_COUNT << "\t";
-
+			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_INIT) << "\t";
 			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_INC) << "\t";
 			result << std::setw(2) << static_cast<int>(this->TP_DD_PERMANENCE_DEC) << "\t";
-			result << std::setw(2) << static_cast<int>(this->TP_DD_PREDICTED_SEGMENT_DEC);
+			result << std::setw(2) << static_cast<int>(this->TP_DD_PREDICTED_SEGMENT_DEC) << "\t";
+
+			result << std::setw(2) << this->TP_DD_SEGMENT_ACTIVE_THRESHOLD << "\t";
+			result << std::setw(2) << this->TP_MIN_DD_ACTIVATION_THRESHOLD << "\t";
+			result << std::setw(2) << this->TP_DD_MAX_NEW_SYNAPSE_COUNT;
+
 			return result.str();
 		}
 	};

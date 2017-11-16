@@ -55,7 +55,7 @@ inline void test_1layer()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 1000;
+	param1.n_time_steps = 10000;
 	param1.n_times = 1;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
@@ -278,7 +278,7 @@ inline void test_swarm_1layer()
 
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 2000;
+	param1.n_time_steps = 1000;
 	param1.n_times = 1;
 
 	param1.progress = false;
@@ -307,7 +307,7 @@ inline void test_swarm_1layer()
 	auto param = std::array<Dynamic_Param, 1>{param1};
 	DataStream<P> datastream;
 
-	const bool load_from_file = false;
+	const bool load_from_file = true;
 	if (load_from_file)
 	{
 		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -497,10 +497,10 @@ inline void test_swarm_3layers()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	if (true) test_1layer();
+	if (false) test_1layer();
 	if (false) test_2layers();
 	if (false) test_3layers();
-	if (false) test_swarm_1layer();
+	if (true) test_swarm_1layer();
 	if (false) test_swarm_2layers();
 	if (false) test_swarm_3layers();
 
