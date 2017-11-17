@@ -69,6 +69,19 @@ namespace htm
 				return result;
 			}
 
+			std::tuple<int, int> next_time(int pos_in_sequence, int sequence_i) const
+			{
+				int pos_in_sequence_next = pos_in_sequence + 1;
+				int sequence_i_next = sequence_i;
+
+				if (pos_in_sequence_next >= static_cast<int>(this->sequences[sequence_i_next].size()))
+				{ // start a new random sequence
+					pos_in_sequence_next = 0;
+					sequence_i_next = this->random_sequence_dist(this->random_engine);
+				}
+				return std::make_tuple(pos_in_sequence_next, sequence_i_next);
+			}
+
 			void advance_time_current() const
 			{
 				if (this->use_file_data)
@@ -89,13 +102,9 @@ namespace htm
 				}
 				else
 				{
-					this->pos_in_sequence_next = this->pos_in_sequence + 1;
-
-					if (this->pos_in_sequence_next >= static_cast<int>(this->sequences[this->sequence_i].size()))
-					{ // start a new random sequence
-						this->pos_in_sequence_next = 0;
-						this->sequence_i_next = this->random_sequence_dist(this->random_engine);
-					}
+					const auto tup = next_time(this->pos_in_sequence, this->sequence_i);
+					this->pos_in_sequence_next = std::get<0>(tup);
+					this->sequence_i_next = std::get<1>(tup);
 				}
 			}
 
@@ -168,17 +177,33 @@ namespace htm
 					copy_partial(sensor_activity, this->sequences[this->sequence_i][this->pos_in_sequence]);
 				}
 			}
-			void next_sensors(typename Layer<P>::Active_Sensors& sensor_activity) const
+			void future_sensors(typename Layer<P>::Active_Sensors& sensor_activity, int future) const
 			{
 				if (this->use_file_data)
 				{
 					const int time_step_max = static_cast<int>(this->file_data.size());
-					const int i = (this->time + 1)% time_step_max;
+					const int i = (this->time + future)% time_step_max;
 					copy_partial(sensor_activity, this->file_data[i]);
 				}
 				else
 				{
-					copy_partial(sensor_activity, this->sequences[this->sequence_i_next][this->pos_in_sequence_next]);
+					if (future == 1)
+					{
+						copy_partial(sensor_activity, this->sequences[this->sequence_i_next][this->pos_in_sequence_next]);
+					}
+					else
+					{
+						int pos_in_sequence_future = this->pos_in_sequence_next;
+						int sequence_i_future = this->sequence_i_next;
+
+						for (int i = 1; i < future; ++i)
+						{
+							const auto tup = next_time(pos_in_sequence_future, sequence_i_future);
+							pos_in_sequence_future = std::get<0>(tup);
+							sequence_i_future = std::get<1>(tup);
+						}
+						copy_partial(sensor_activity, this->sequences[sequence_i_future][pos_in_sequence_future]);
+					}
 				}
 			}
 		};

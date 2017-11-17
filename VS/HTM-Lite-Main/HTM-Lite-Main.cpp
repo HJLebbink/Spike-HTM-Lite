@@ -44,10 +44,10 @@ inline void test_1layer()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 1 * 8;
+	const int N_BLOCKS = 2 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int HISTORY = 8;
+	const int HISTORY_SIZE = 7;
 
 	//const arch_t ARCH = arch_t::X64;
 	const arch_t ARCH = arch_t::RUNTIME;
@@ -55,24 +55,36 @@ inline void test_1layer()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 10000;
+	param1.n_time_steps = 500;
 	param1.n_times = 1;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = false;
-	param1.progress_display_interval = 50;
+	param1.show_mismatch_interval = 20;
+	param1.show_input_and_predicted_interval = 0;
 
-	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY, ARCH>;
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
 	Layer<P> layer;
 	DataStream<P> datastream;
 
 	const bool load_from_file = true;
 	if (load_from_file)
 	{
-		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
+		param1.SP_LOCAL_AREA_DENSITY = 0.095;
+
+		param1.SP_PD_PERMANENCE_INIT = 7;
+		param1.SP_PD_PERMANENCE_INC = 14;
+		param1.SP_PD_PERMANENCE_DEC = 28;
+		param1.SP_PD_PERMANENCE_INC_WEAK = 16;
+
+		param1.TP_DD_PERMANENCE_INIT = 18;
+		param1.TP_DD_PERMANENCE_INC = 18;
+		param1.TP_DD_PERMANENCE_DEC = 11;
+		param1.TP_DD_PREDICTED_SEGMENT_DEC = 22;
+
+		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 23;
 		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
-		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 25;
+		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 24;
 
 		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
@@ -84,17 +96,21 @@ inline void test_1layer()
 		const int n_sequences = 18;
 		const int sequence_length = 3;
 
-		param1.SP_LOCAL_AREA_DENSITY = 0.01575;
-		param1.SP_PD_PERMANENCE_INIT = 22;
-		param1.SP_PD_PERMANENCE_INC = 27;
-		param1.SP_PD_PERMANENCE_DEC = 26;
-		param1.SP_PD_PERMANENCE_INC_WEAK = 25;
-		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 17;
-		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 1;
-		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 41;
-		param1.TP_DD_PERMANENCE_INC = 17;
-		param1.TP_DD_PERMANENCE_DEC = 5;
-		param1.TP_DD_PREDICTED_SEGMENT_DEC = 5;
+		param1.SP_LOCAL_AREA_DENSITY = 0.095;
+
+		param1.SP_PD_PERMANENCE_INIT = 7;
+		param1.SP_PD_PERMANENCE_INC = 14;
+		param1.SP_PD_PERMANENCE_DEC = 28;
+		param1.SP_PD_PERMANENCE_INC_WEAK = 16;
+
+		param1.TP_DD_PERMANENCE_INIT = 18;
+		param1.TP_DD_PERMANENCE_INC = 18;
+		param1.TP_DD_PERMANENCE_DEC = 11;
+		param1.TP_DD_PREDICTED_SEGMENT_DEC = 22;
+
+		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 23;
+		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
+		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 24;
 
 		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
 	}
@@ -112,12 +128,12 @@ inline void test_2layers()
 	const int N_BLOCKS_L1 = 2 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
-	const int HISTORY_L1 = 8;
+	const int HISTORY_SIZE_L1 = 7;
 
 	const int N_BLOCKS_L2 = 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_L2 = 8;
+	const int HISTORY_SIZE_L2 = 7;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -129,8 +145,8 @@ inline void test_2layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = true;
-	param1.progress_display_interval = 200;
+	param1.show_input_and_predicted_interval = 1;
+	param1.show_mismatch_interval = 200;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
 	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
@@ -141,8 +157,8 @@ inline void test_2layers()
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 	using Network_Config = network::network_2Layer<
 		N_VISIBLE_SENSORS_L1,
-		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_SIZE_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_SIZE_L2,
 		ARCH>;
 
 	using P1 = Network_Config::P_L1;
@@ -169,17 +185,17 @@ inline void test_3layers()
 	const int N_BLOCKS_L1 = 2 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
-	const int HISTORY_L1 = 8;
+	const int HISTORY_SIZE_L1 = 7;
 
 	const int N_BLOCKS_L2 = 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_L2 = 8;
+	const int HISTORY_SIZE_L2 = 7;
 
 	const int N_BLOCKS_L3 = 1 * 8;
 	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
 	const int N_BITS_CELL_L3 = 4;
-	const int HISTORY_L3 = 8;
+	const int HISTORY_SIZE_L3 = 7;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -191,8 +207,8 @@ inline void test_3layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = false;
-	param1.progress_display_interval = 20;
+	param1.show_input_and_predicted_interval = 0;
+	param1.show_mismatch_interval = 20;
 
 	Dynamic_Param param2(param1);
 	Dynamic_Param param3(param1);
@@ -237,9 +253,9 @@ inline void test_3layers()
 
 	using Network_Config = network::network_3Layer<
 		N_VISIBLE_SENSORS_L1,
-		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_SIZE_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_SIZE_L2,
+		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_SIZE_L3,
 		ARCH>;
 
 	using P1 = Network_Config::P_L1;
@@ -281,7 +297,7 @@ inline void test_swarm_1layer()
 	param1.n_time_steps = 1000;
 	param1.n_times = 1;
 
-	param1.progress = false;
+	param1.show_input_and_predicted_interval = 0;
 	param1.quiet = true;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -337,12 +353,12 @@ inline void test_swarm_2layers()
 	const int N_SENSORS_DIM1 = 20;
 	const int N_SENSORS_DIM2 = 20;
 	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int HISTORY_L1 = 8;
+	const int HISTORY_SIZE_L1 = 7;
 
 	const int N_BLOCKS_L2 = 1 * 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_L2 = 8;
+	const int HISTORY_SIZE_L2 = 7;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -354,7 +370,7 @@ inline void test_swarm_2layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = false;
+	param1.show_input_and_predicted_interval = 0;
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -380,8 +396,8 @@ inline void test_swarm_2layers()
 
 	using Network_Config = network::network_2Layer<
 		N_VISIBLE_SENSORS_L1,
-		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_SIZE_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_SIZE_L2,
 		ARCH>;
 
 	using P1 = Network_Config::P_L1;
@@ -417,17 +433,17 @@ inline void test_swarm_3layers()
 	const int N_BLOCKS_L1 = 2 * 8;
 	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
 	const int N_BITS_CELL_L1 = 4;
-	const int HISTORY_L1 = 8;
+	const int HISTORY_SIZE_L1 = 7;
 
 	const int N_BLOCKS_L2 = 1 * 8;
 	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
 	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_L2 = 8;
+	const int HISTORY_SIZE_L2 = 7;
 
 	const int N_BLOCKS_L3 = 1 * 8;
 	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
 	const int N_BITS_CELL_L3 = 4;
-	const int HISTORY_L3 = 8;
+	const int HISTORY_SIZE_L3 = 7;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -439,7 +455,7 @@ inline void test_swarm_3layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.progress = false;
+	param1.show_input_and_predicted_interval = 0;
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -466,9 +482,9 @@ inline void test_swarm_3layers()
 
 	using Network_Config = network::network_3Layer<
 		N_VISIBLE_SENSORS_L1,
-		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_L1,
-		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_L2,
-		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_L3,
+		N_COLUMNS_L1, N_BITS_CELL_L1, HISTORY_SIZE_L1,
+		N_COLUMNS_L2, N_BITS_CELL_L2, HISTORY_SIZE_L2,
+		N_COLUMNS_L3, N_BITS_CELL_L3, HISTORY_SIZE_L3,
 		ARCH>;
 
 	using P1 = Network_Config::P_L1;
@@ -497,10 +513,10 @@ inline void test_swarm_3layers()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	if (false) test_1layer();
+	if (true) test_1layer();
 	if (false) test_2layers();
 	if (false) test_3layers();
-	if (true) test_swarm_1layer();
+	if (false) test_swarm_1layer();
 	if (false) test_swarm_2layers();
 	if (false) test_swarm_3layers();
 

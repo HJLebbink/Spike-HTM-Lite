@@ -337,6 +337,8 @@ namespace htm
 								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
 								for (int i = 0; i < 4; ++i)
 								{
+								//	__mmask16 a = _mm512_kand
+
 									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
 									if (mask_16 != 0)
 									{
@@ -362,7 +364,7 @@ namespace htm
 						#endif
 					}
 
-					//P::N_SENSORS < 512
+					// P::N_SENSORS < 512
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi32(
 						const Layer<P>& layer,
@@ -384,8 +386,8 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence[column_i].data());
-							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin[column_i].data());
+							auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_permanence_sf[column_i].data());
+							auto origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.sp_pd_synapse_origin_sensor_sf[column_i].data());
 
 							__m512i overlap_epi32 = _mm512_setzero_epi32();
 
@@ -411,7 +413,7 @@ namespace htm
 
 						#if _DEBUG
 						std::vector<int> overlaps_ref = std::vector<int>(P::N_COLUMNS);
-						priv::calc_overlap::calc_overlap_ref(layer, param, sensor_activity, overlaps_ref);
+						priv::calc_overlap::synapse_forward::calc_overlap_sf_ref(layer, param, active_sensors, overlaps_ref);
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							const int overlap_ref = overlaps_ref[column_i];
@@ -420,7 +422,8 @@ namespace htm
 						}
 						#endif
 					}
-					// not much faster than calc_overlap_avx512_small_epi32
+					
+					// P::N_SENSORS < 512: not much faster than calc_overlap_avx512_small_epi32
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi16(
 						const Layer<P>& layer,
@@ -506,8 +509,8 @@ namespace htm
 						{
 							if (P::N_SENSORS < 512)
 							{
-								synapse_forward::calc_overlap_avx512_sf_small_epi16(layer, param, active_sensors, overlaps);
-								//indexed_by_column::calc_overlap_avx512_ic_small_epi32(layer, param, active_sensors, overlaps);
+								//synapse_forward::calc_overlap_avx512_sf_small_epi16(layer, param, active_sensors, overlaps);
+								synapse_forward::calc_overlap_avx512_sf_small_epi32(layer, param, active_sensors, overlaps);
 							}
 							else
 							{
@@ -542,7 +545,7 @@ namespace htm
 				{
 					//Update synapses iterator over sensors.
 					template <typename P>
-					void update_synapses_is_ref(
+					void update_synapses_sb_ref(
 						Layer<P>& layer,
 						const Dynamic_Param& param,
 						const typename Layer<P>::Active_Columns& active_columns,
@@ -639,11 +642,11 @@ namespace htm
 						#endif
 					}
 				}
-				namespace indexed_by_column
+				namespace synapse_forward
 				{
 					//Update synapses iterator over column. When iterating over the columns, the sparsity of the culumns yields in less memory access.
 					template <typename P>
-					void update_synapses_ic_ref(
+					void update_synapses_sf_ref(
 						Layer<P>& layer,
 						const Dynamic_Param& param,
 						const typename Layer<P>::Active_Columns& active_columns,
@@ -683,13 +686,13 @@ namespace htm
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) indexed_by_column::update_synapses_ic_ref(layer, param, active_columns, active_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) indexed_by_column::update_synapses_ic_ref(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::update_synapses_sf_ref(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::update_synapses_sf_ref(layer, param, active_columns, active_sensors);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::update_synapses_is_ref(layer, param, active_columns, active_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::update_synapses_is_ref(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::update_synapses_sb_ref(layer, param, active_columns, active_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::update_synapses_sb_ref(layer, param, active_columns, active_sensors);
 					}
 				}
 			}

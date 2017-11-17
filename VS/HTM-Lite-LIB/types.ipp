@@ -538,8 +538,8 @@ namespace htm
 		public:
 			static constexpr int SIZE = SIZE_IN;
 			static constexpr int HISTORY_SIZE = HISTORY_SIZE_IN;
-			static_assert(HISTORY_SIZE > 1, "invalid HISTORY_SIZE_IN");
-			static_assert(HISTORY_SIZE < 9, "invalid HISTORY_SIZE_IN");
+			static_assert(HISTORY_SIZE >= 1, "invalid HISTORY_SIZE_IN");
+			static_assert(HISTORY_SIZE <= 8, "invalid HISTORY_SIZE_IN");
 
 			std::vector<char> _data;
 
@@ -613,9 +613,9 @@ namespace htm
 		template <typename P>
 		struct Layer
 		{
-			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE>;
-			using Winner_Cells = typename History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE>;
-			using Active_Columns = typename Bitset_Compact<P::N_COLUMNS>;
+			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE + 1>;
+			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE + 1>;
+			using Active_Columns = Bitset_Compact<P::N_COLUMNS>;
 			using Active_Sensors = Bitset_Compact<P::N_SENSORS>;
 			using Active_Visible_Sensors = Bitset_Compact<P::N_VISIBLE_SENSORS>;
 			using Active_Segments = History<Segments_Set, 2>;

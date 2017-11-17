@@ -78,8 +78,8 @@ namespace htm
 		static_assert(N_BITS_CELL_IN > 0, "ERROR: Parameters: provided N_BITS_CELL is too small; min N_BITS_CELL is 1.");
 		static_assert(N_BITS_CELL_IN < 7, "ERROR: Parameters: provided N_BITS_CELL is too large; max N_BITS_CELL is 6.");
 		static_assert(N_VISIBLE_SENSORS_IN > 0, "ERROR: Parameters: provided N_VISIBLE_SENSORS_IN is too small; min N_VISIBLE_SENSORS_IN is 1.");
-//		static_assert(HISTORY_SIZE_IN < 2, "ERROR: Parameters: provided HISTORY_SIZE_IN is too small; min HISTORY_SIZE_IN is 2.");
-//		static_assert(HISTORY_SIZE_IN > 8, "ERROR: Parameters: provided HISTORY_SIZE_IN is too large; max HISTORY_SIZE_IN is 8.");
+//		static_assert(HISTORY_SIZE_IN <= 1, "ERROR: Parameters: provided HISTORY_SIZE_IN is too small; min HISTORY_SIZE_IN is 1.");
+//		static_assert(HISTORY_SIZE_IN >= 7, "ERROR: Parameters: provided HISTORY_SIZE_IN is too large; max HISTORY_SIZE_IN is 7.");
 
 		//========================================================================
 		//Number of columns in layer: Multiple of 64.
@@ -91,7 +91,7 @@ namespace htm
 
 		static constexpr int N_SENSORS = N_VISIBLE_SENSORS + N_HIDDEN_SENSORS;
 
-		// History of 2 means that current and prev 
+		// History of 1 (minimum) means that there is one history, history of 7 means there are zeven histories.
 		static constexpr int HISTORY_SIZE = HISTORY_SIZE_IN;
 
 		//Whether AVX512 optimized code is used or a reference implementation
@@ -205,14 +205,14 @@ namespace htm
 		//How often the complete learning run will be repeated
 		int n_times = 1;
 
-		//Whether progress will be shown
-		bool progress = false;
-
-		//How often progress will be shown
-		int progress_display_interval = 10;
-
 		//Whether stuff will be written to stdout
 		bool quiet = false;
+
+		//Show the sensor input, the predicted sensor input and the mismatch; zero means off; one means every time step.
+		int show_input_and_predicted_interval = 0;
+
+		//Show the predicted mismatch as the average number of misspredicted sensors; zero means off; one means every time step.
+		int show_mismatch_interval = 0;
 
 
 		int n_visible_sensors_dim1 = 20;

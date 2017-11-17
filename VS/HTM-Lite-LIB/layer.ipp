@@ -51,11 +51,12 @@ namespace htm
 				{
 					//Return the number of times a sensor is predicteed. If the predicted sensor 
 					//influx is ABOVE (not equal) this threshold, the sensor is said to be active.
-					//Indexed by sensor
+					//Synapse backwards
 					template <typename P>
 					void get_predicted_sensors_sb_ref(
 						const Layer<P>& layer,
 						const int sensor_threshold,
+						const int future,
 						const Dynamic_Param& param,
 						//out
 						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
@@ -98,52 +99,6 @@ namespace htm
 						}
 					}
 
-					template <typename P>
-					void get_predicted_sensors_is_avx512(
-						const Layer<P>& layer,
-						const int sensor_threshold,
-						const Dynamic_Param& param,
-						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
-					{
-						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
-
-						Layer<P>::Active_Columns predicted_columns;
-
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-						{
-							const auto& column = layer[column_i];
-							predicted_columns.set(column_i, column.active_dd_segments.any_current());
-						}
-
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-						{
-							int sensor_activity = 0;
-
-							const auto& permanence = layer.sp_pd_synapse_permanence[sensor_i];
-							const auto& destination_columns = layer.sp_pd_destination_column[sensor_i];
-
-							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count[sensor_i]; ++synapse_i)
-							{
-								if (permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
-								{
-									const int column_i = destination_columns[synapse_i];
-									if (predicted_columns.get(column_i))
-									{
-										sensor_activity++;
-										if (sensor_activity > sensor_threshold) break;
-									}
-								}
-							}
-							predicted_sensor_activity[sensor_i] = sensor_activity;
-						}
-
-						predicted_sensor.clear_all();
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
-						{
-							if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
-						}
-					}
 				}
 				namespace synapse_forward
 				{
@@ -151,6 +106,7 @@ namespace htm
 					void get_predicted_sensors_sf_ref(
 						const Layer<P>& layer,
 						const int sensor_threshold,
+						const int future,
 						const Dynamic_Param& param,
 						//out
 						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
@@ -169,7 +125,7 @@ namespace htm
 								{
 									if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 									{
-										const auto sensor_i = synapse_origin[synapse_i]; // gather
+										const auto sensor_i = synapse_origin[synapse_i];
 										if (sensor_i < P::N_VISIBLE_SENSORS)
 										{
 											predicted_sensor_activity[sensor_i]++;
@@ -184,6 +140,84 @@ namespace htm
 							if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
 						}
 					}
+
+					template <typename P>
+					void get_predicted_sensors_sf_future2(
+						const Layer<P>& layer,
+						const int sensor_threshold,
+						const int future,
+						const Dynamic_Param& param,
+						//out
+						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
+					{
+						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
+						auto active_cells = layer.active_cells;
+
+						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						{
+							bool column_is_predicted = false;
+							{
+								const int n_segments = layer.dd_segment_count[column_i];
+								const auto& permanence_segment = layer.dd_synapse_permanence_sf[column_i];
+								const auto& delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i];
+								const auto& synapse_count_segment = layer.dd_synapse_count_sf[column_i];
+
+								for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
+								{
+									const auto& dd_synapse_permanence_segment = permanence_segment[segment_i];
+									const auto& dd_synapse_delay_origin_segment = delay_origin_segment[segment_i];
+									const int n_synpases = synapse_count_segment[segment_i];
+
+									int n_active_synapses = 0;
+
+									for (auto synapse_i = 0; synapse_i < n_synpases; ++synapse_i)
+									{
+										const Permanence permanence = dd_synapse_permanence_segment[synapse_i];
+										if (permanence > P::TP_DD_PERMANENCE_THRESHOLD)
+										{
+											const auto delay_and_cell_id = dd_synapse_delay_origin_segment[synapse_i];
+											const int delay = tools::get_delay(delay_and_cell_id) - future;
+											if (delay >= 0)
+											{
+												const int global_cell_id = tools::get_global_cell_id(delay_and_cell_id);
+												if (active_cells.get(global_cell_id, delay)) // deadly gather here!
+												{
+													n_active_synapses++;
+												}
+											}
+										}
+									}
+									if (n_active_synapses > param.TP_DD_SEGMENT_ACTIVE_THRESHOLD)
+									{
+										column_is_predicted = true;
+										break;
+									}
+								}
+							}
+							if (column_is_predicted)
+							{
+								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
+								const auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
+
+								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+								{
+									if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
+									{
+										const auto sensor_i = synapse_origin[synapse_i];
+										if (sensor_i < P::N_VISIBLE_SENSORS)
+										{
+											predicted_sensor_activity[sensor_i]++;
+										}
+									}
+								}
+							}
+							
+							for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+							{
+								predicted_sensor.set(sensor_i, (predicted_sensor_activity[sensor_i] > sensor_threshold));
+							}
+						}
+					}
 				}
 				
 				//return the number of times a sensor is predicteed.
@@ -192,29 +226,31 @@ namespace htm
 				void d(
 					const Layer<P>& layer,
 					const int sensor_threshold,
+					const int future,
 					const Dynamic_Param& param,
 					//out
 					typename Layer<P>::Active_Visible_Sensors& predicted_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, param, predicted_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_future2(layer, sensor_threshold, future, param, predicted_sensors);
+						//if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, future, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, future, param, predicted_sensors);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, param, predicted_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, future, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, future, param, predicted_sensors);
 					}
 				}
 			}
 
 			template <typename P>
 			int calc_mismatch(
-				const int t,
+				const Layer<P>& layer,
+				const int future,
 				const Dynamic_Param& param,
-				const DataStream<P>& datastream,
-				const Layer<P>& layer)
+				const DataStream<P>& datastream)
 			{
 				// if the next time step is not predictable, there is no mismatch
 				if (!datastream.next_sensors_predictable()) return 0;
@@ -223,8 +259,8 @@ namespace htm
 				Layer<P>::Active_Visible_Sensors predicted_sensors;
 
 				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
-				get_predicted_sensors::d(layer, sensor_threshold, param, predicted_sensors);
-				datastream.next_sensors(active_sensors);
+				get_predicted_sensors::d(layer, sensor_threshold, future, param, predicted_sensors);
+				datastream.future_sensors(active_sensors, future);
 
 				int mismatch = 0;
 				//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
@@ -267,12 +303,14 @@ namespace htm
 			void show_progress(
 				const int t,
 				const Layer<P>& layer,
+				const int future,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
 				const typename Layer<P>::Active_Columns& active_columns)
 			{
 				const int progress_frequency = 1;
 				const int sensor_threshold = 1;
+
 				Layer<P>::Active_Visible_Sensors active_visible_sensors;
 				Layer<P>::Active_Sensors active_sensors;
 
@@ -282,10 +320,10 @@ namespace htm
 					{
 						std::cout << "=====" << std::endl;
 
-						get_predicted_sensors::d(layer, sensor_threshold, param, active_visible_sensors);
-						datastream.next_sensors(active_sensors);
+						get_predicted_sensors::d(layer, sensor_threshold, future, param, active_visible_sensors);
+						datastream.future_sensors(active_sensors, future);
 
-						std::cout << "at t = " << t << ": predicted sensor activity at (future) t = " << (t + 1) << ":" << std::endl;
+						std::cout << "at t = " << t << ": predicted sensor activity at (future "<< future<<") t = " << (t + future) << ":" << std::endl;
 						std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
 						std::cout << " | ";
 						std::cout << std::setw(param.n_visible_sensors_dim1) << "correct";
@@ -424,6 +462,37 @@ namespace htm
 				priv::one_step<false>(active_sensors, layer, time, param);
 		}
 
+		template <typename P>
+		void display_info(
+			const int time,
+			const DataStream<P>& datastream,
+			const Layer<P>& layer,
+			const int future, 
+			const Dynamic_Param& param,
+			const int current_mismatch,
+			int& mismatch)
+		{
+			if (!param.quiet)
+			{
+				if (param.show_mismatch_interval > 0)
+				{
+					mismatch += current_mismatch;
+
+					if (time == 0) std::cout << "layer:display_info: mismatch: ";
+					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
+					{
+						const float average_mismatch = static_cast<float>(mismatch) / param.show_mismatch_interval;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						mismatch = 0;
+					}
+				}
+				if (param.show_input_and_predicted_interval > 0)
+				{
+					priv::show_progress(time, layer, future, param, datastream, layer.active_columns);
+				}
+			}
+		}
+
 		//Run the provided layer once, update steps as provided in param
 		template <typename P>
 		int run(
@@ -431,6 +500,8 @@ namespace htm
 			Layer<P>& layer,
 			const Dynamic_Param& param)
 		{
+			const int future = 1;
+
 			int total_mismatch = 0;
 			int mismatch = 0;
 			int current_mismatch = 0;
@@ -440,27 +511,9 @@ namespace htm
 				datastream.current_sensors(layer.active_sensors);
 				encoder::add_sensor_noise<P>(layer.active_sensors);
 				one_step(layer.active_sensors, layer, time, param);
-
-				if (param.progress_display_interval > 0)
-				{
-					current_mismatch = priv::calc_mismatch(time, param, datastream, layer);
-				}
+				current_mismatch = priv::calc_mismatch(layer, future, param, datastream);
 				total_mismatch += current_mismatch;
-
-				if (!param.quiet)
-				{
-					mismatch += current_mismatch;
-
-					if (time == 0) std::cout << "layer:run: total mismatch: ";
-					if (((time % param.progress_display_interval) == 0) && (time > 0))
-					{
-						const float average_mismatch = static_cast<float>(mismatch) / param.progress_display_interval;
-						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-						mismatch = 0;
-					}
-				}
-				if (param.progress) priv::show_progress(time, layer, param, datastream, layer.active_columns);
-
+				display_info(time, datastream, layer, future, param, current_mismatch, mismatch);
 				datastream.advance_time();
 			}
 			if (!param.quiet) std::cout << std::endl;

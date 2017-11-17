@@ -154,6 +154,8 @@ namespace htm
 			Layer<P1>& layer1,
 			Layer<P2>& layer2)
 		{
+			const int future = 1;
+
 			int total_mismatch = 0;
 			int mismatch = 0;
 			int current_mismatch = 0;
@@ -162,29 +164,10 @@ namespace htm
 			{
 				datastream.current_sensors(layer1.active_sensors);
 				encoder::add_sensor_noise<P1>(layer1.active_sensors);
-
 				priv::one_step(param, time, layer1, layer2);
-
-				if (param[0].progress_display_interval > 0)
-				{
-					current_mismatch = layer::priv::calc_mismatch(time, param[0], datastream, layer1);
-				}
+				current_mismatch = layer::priv::calc_mismatch(layer1, future, param[0], datastream);
 				total_mismatch += current_mismatch;
-
-				if (!param[0].quiet)
-				{
-					mismatch += current_mismatch;
-
-					if (time == 0) std::cout << "layer:run: total mismatch: ";
-					if (((time % param[0].progress_display_interval) == 0) && (time > 0))
-					{
-						const float average_mismatch = static_cast<float>(mismatch) / param[0].progress_display_interval;
-						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-						mismatch = 0;
-					}
-				}
-				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], datastream, layer1.active_columns);
-
+				layer::display_info(time, datastream, layer1, future, param[0], current_mismatch, mismatch);
 				datastream.advance_time();
 			}
 			if (!param[0].quiet) std::cout << std::endl;
@@ -217,6 +200,8 @@ namespace htm
 			Layer<P2>& layer2,
 			Layer<P3>& layer3)
 		{
+			const int future = 1;
+
 			int total_mismatch = 0;
 			int mismatch = 0;
 			int current_mismatch = 0;
@@ -225,29 +210,10 @@ namespace htm
 			{
 				datastream.current_sensors(layer1.active_sensors);
 				encoder::add_sensor_noise<P1>(layer1.active_sensors);
-
 				priv::one_step(param, time, layer1, layer2, layer3);
-
-				if (param[0].progress_display_interval > 0)
-				{
-					current_mismatch = layer::priv::calc_mismatch(time, param[0], datastream, layer1);
-				}
+				current_mismatch = layer::priv::calc_mismatch(layer1, future, param[0], datastream);
 				total_mismatch += current_mismatch;
-
-				if (!param[0].quiet)
-				{
-					mismatch += current_mismatch;
-
-					if (time == 0) std::cout << "layer:run: total mismatch: ";
-					if (((time % param[0].progress_display_interval) == 0) && (time > 0))
-					{
-						const float average_mismatch = static_cast<float>(mismatch) / param[0].progress_display_interval;
-						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-						mismatch = 0;
-					}
-				}
-				if (param[0].progress) layer::priv::show_progress(time, layer1, param[0], datastream, layer1.active_columns);
-
+				layer::display_info(time, datastream, layer1, future, param[0], current_mismatch, mismatch);
 				datastream.advance_time();
 			}
 			if (!param[0].quiet) std::cout << std::endl;
