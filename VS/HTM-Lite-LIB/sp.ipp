@@ -318,7 +318,7 @@ namespace htm
 						//out 
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
+						const __m128i connected_threshold_epi8 = _mm_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 						auto active_sensors_ptr = active_sensors.data();
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
@@ -334,15 +334,11 @@ namespace htm
 								//const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 								const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 
-								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
 								for (int i = 0; i < 4; ++i)
 								{
-								//	__mmask16 a = _mm512_kand
-
-									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
-									if (mask_16 != 0)
+									const __mmask16 mask_16 = _mm_cmpgt_epi8_mask(_mm512_extracti64x2_epi64(permanence_epi8, i), connected_threshold_epi8);
+									//if (mask_16 != 0)
 									{
-										//const __m512i origin_epi32 = _mm512_stream_load_si512(&origin_epi32_ptr[(block * 4) + i]);
 										const __m512i origin_epi32 = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + i]);
 										overlap_epi32 = _mm512_add_epi32(overlap_epi32, get_sensors_epi32(mask_16, origin_epi32, active_sensors_ptr));
 									}
@@ -363,7 +359,7 @@ namespace htm
 						}
 						#endif
 					}
-
+					
 					// P::N_SENSORS < 512
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi32(
@@ -375,13 +371,13 @@ namespace htm
 					{
 						assert_msg(P::N_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
+						const __m128i connected_threshold_epi8 = _mm_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 						std::array<int, 16> t = { 0 };
 						for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
 						{
 							t[i] = active_sensors._data[i];
 						}
-						const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
+						const __m512i active_sensors_epi32 = _mm512_load_epi32(t.data());
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
@@ -395,15 +391,14 @@ namespace htm
 							{
 								//const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 								const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
-								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
+								
 								for (int i = 0; i < 4; ++i)
 								{
-									const __mmask16 mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
-									//if (mask_16 != 0) // slower with this check
+									const __mmask16 connected_mask_16_i = _mm_cmpgt_epi8_mask(_mm512_extracti64x2_epi64(permanence_epi8, i), connected_threshold_epi8);
+									//if (connected_mask_16_i != 0) // slower with this check
 									{
-										//const __m512i origin_epi32 = _mm512_stream_load_si512(&origin_epi32_ptr[(block * 4) + i]);
 										const __m512i origin_epi32 = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + i]);
-										overlap_epi32 = _mm512_add_epi32(overlap_epi32, get_sensors_epi32(mask_16, origin_epi32, active_sensors_simd));
+										overlap_epi32 = _mm512_add_epi32(overlap_epi32, get_sensors_epi32(connected_mask_16_i, origin_epi32, active_sensors_epi32));
 									}
 								}
 							}
@@ -422,7 +417,7 @@ namespace htm
 						}
 						#endif
 					}
-					
+
 					// P::N_SENSORS < 512: not much faster than calc_overlap_avx512_small_epi32
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi16(
@@ -434,14 +429,14 @@ namespace htm
 					{
 						assert_msg(P::N_VISIBLE_SENSORS < 512, "ERROR: calc_overlap_avx512_small: N_SENSORS is larger than 512");
 
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
+						const __m256i connected_threshold_epi8 = _mm256_set1_epi8(P::SP_PD_PERMANENCE_THRESHOLD);
 
 						std::array<int, 16> t = { 0 };
 						for (int i = 0; i < active_sensors.N_BLOCKS; ++i)
 						{
 							t[i] = active_sensors._data[i];
 						}
-						const __m512i active_sensors_simd = _mm512_load_epi32(t.data());
+						const __m512i active_sensors_epi32 = _mm512_load_epi32(t.data());
 						const int n_blocks = htm::tools::n_blocks_64(P::SP_N_PD_SYNAPSES);
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
@@ -456,23 +451,22 @@ namespace htm
 							{
 								//const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 								const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
-								const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
-
-								const __mmask32 mask_32_A = static_cast<__mmask32>(connected_mask_64 >> (0 * 32));
+								
+								const __mmask32 mask_32_A = _mm256_cmpgt_epi8_mask(_mm512_extracti64x4_epi64(permanence_epi8, 0), connected_threshold_epi8);
 								const __m512i origin_epi32_A = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + 0]);
 								const __m512i origin_epi32_B = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + 1]);
 								const __m512i origin_epu16_A = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_A));
 								const __m512i origin_epu16_B = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_B));
 								const __m512i origin_epu16_AB = _mm512_shuffle_i64x2(origin_epu16_A, origin_epu16_B, 0b01000100);
-								overlap_epu16_AB = _mm512_adds_epu16(overlap_epu16_AB, get_sensors_epi16(mask_32_A, origin_epu16_AB, active_sensors_simd));
+								overlap_epu16_AB = _mm512_adds_epu16(overlap_epu16_AB, get_sensors_epi16(mask_32_A, origin_epu16_AB, active_sensors_epi32));
 
-								const __mmask32 mask_32_B = static_cast<__mmask32>(connected_mask_64 >> (1 * 32));
+								const __mmask32 mask_32_B = _mm256_cmpgt_epi8_mask(_mm512_extracti64x4_epi64(permanence_epi8, 1), connected_threshold_epi8);
 								const __m512i origin_epi32_C = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + 2]);
 								const __m512i origin_epi32_D = _mm512_load_si512(&origin_epi32_ptr[(block * 4) + 3]);
 								const __m512i origin_epu16_C = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_C));
 								const __m512i origin_epu16_D = _mm512_castsi256_si512(_mm512_cvtepi32_epi16(origin_epi32_D));
 								const __m512i origin_epu16_CD = _mm512_shuffle_i64x2(origin_epu16_C, origin_epu16_D, 0b01000100);
-								overlap_epu16_CD = _mm512_adds_epu16(overlap_epu16_CD, get_sensors_epi16(mask_32_B, origin_epu16_CD, active_sensors_simd));
+								overlap_epu16_CD = _mm512_adds_epu16(overlap_epu16_CD, get_sensors_epi16(mask_32_B, origin_epu16_CD, active_sensors_epi32));
 							}
 							const __m512i overlap_epu16 = _mm512_adds_epu16(overlap_epu16_AB, overlap_epu16_CD);
 							const __m512i overlap_epi32 = _mm512_add_epi32(_mm512_and_epi32(overlap_epu16, _mm512_set1_epi32(0xFFFF)), _mm512_srli_epi32(overlap_epu16, 16));
@@ -509,8 +503,10 @@ namespace htm
 						{
 							if (P::N_SENSORS < 512)
 							{
-								//synapse_forward::calc_overlap_avx512_sf_small_epi16(layer, param, active_sensors, overlaps);
-								synapse_forward::calc_overlap_avx512_sf_small_epi32(layer, param, active_sensors, overlaps);
+								if (true)
+									synapse_forward::calc_overlap_avx512_sf_small_epi16(layer, param, active_sensors, overlaps);
+								else
+									synapse_forward::calc_overlap_avx512_sf_small_epi32(layer, param, active_sensors, overlaps);
 							}
 							else
 							{

@@ -918,8 +918,8 @@ namespace htm
 						}
 						#endif
 
-						const __m512i connected_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
-						const __m512i active_threshold_epi8 = _mm512_set1_epi8(P::TP_DD_PERMANENCE_THRESHOLD);
+						const __m128i connected_threshold_epi8 = _mm_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
+						const __m128i active_threshold_epi8 = _mm_set1_epi8(P::TP_DD_PERMANENCE_THRESHOLD);
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
@@ -950,23 +950,21 @@ namespace htm
 								#pragma ivdep // assumed vector dependencies are ignored
 								for (int block = 0; block < n_blocks; ++block)
 								{
-									const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
-									//const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
-									const __mmask64 connected_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, connected_threshold_epi8);
-									const __mmask64 active_mask_64 = _mm512_cmpgt_epi8_mask(permanence_epi8, active_threshold_epi8);
-
+									//const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
+									const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
+									
 									#pragma ivdep // assumed vector dependencies are ignored
 									for (int i = 0; i < 4; ++i)
 									{
-										const __mmask16 connected_mask_16 = static_cast<__mmask16>(connected_mask_64 >> (i * 16));
+										const __m128i permanence_epi8_i = _mm512_extracti64x2_epi64(permanence_epi8, i);
+										const __mmask16 connected_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, connected_threshold_epi8);
+
 										if (connected_mask_16 != 0)
 										{
-											//const __m512i delay_origin = _mm512_stream_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
+											const __mmask16 active_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, active_threshold_epi8);
 											const __m512i delay_origin = _mm512_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
-
 											const __m512i sensors_epi32 = priv::get_sensors_epi32(connected_mask_16, delay_origin, active_cells_ptr);
 											n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
-											const __mmask16 active_mask_16 = static_cast<__mmask16>(active_mask_64 >> (i * 16));
 											n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
 										}
 									}
