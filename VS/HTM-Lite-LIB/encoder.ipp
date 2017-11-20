@@ -35,11 +35,11 @@ namespace htm
 		using namespace htm::types;
 
 		template <typename P>
-		std::vector<typename Layer<P>::Active_Visible_Sensors> encode_pass_through(
+		std::vector<typename Layer_Fluent<P>::Active_Visible_Sensors> encode_pass_through(
 			const std::string& filename,
 			const Dynamic_Param& param)
 		{
-			auto data = std::vector<Layer<P>::Active_Visible_Sensors>();
+			auto data = std::vector<Layer_Fluent<P>::Active_Visible_Sensors>();
 
 			std::ifstream input(filename);
 			if (!input.good())
@@ -54,7 +54,7 @@ namespace htm
 			bool endFile = false;
 			while (!endFile)
 			{
-				Layer<P>::Active_Visible_Sensors item;
+				Layer_Fluent<P>::Active_Visible_Sensors item;
 				auto pos = 0;
 
 				for (auto i1 = 0; i1 < param.n_visible_sensors_dim1; ++i1)
@@ -109,7 +109,7 @@ namespace htm
 	
 		template <typename P>
 		void add_sensor_noise(
-			typename Layer<P>::Active_Sensors& active_sensors)
+			typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 		{
 			if (P::SP_SENSOR_NOISE_PERCENT > 0)
 			{

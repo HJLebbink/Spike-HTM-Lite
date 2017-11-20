@@ -190,7 +190,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_active_cells(
-			const typename Layer<P>::Active_Cells& cells)
+			const typename Layer_Fluent<P>::Active_Cells& cells)
 		{
 			const int delay = 0;
 
@@ -242,7 +242,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_active_columns(
-			const typename Layer<P>::Active_Columns& active_columns,
+			const typename Layer_Fluent<P>::Active_Columns& active_columns,
 			const int width)
 		{
 			int sum = 0;
@@ -275,7 +275,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_active_sensors(
-			const typename Layer<P>::Active_Sensors& active_sensors,
+			const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 			const int width)
 		{
 			int sum = 0;
@@ -308,8 +308,8 @@ namespace htm
 
 		template <typename P>
 		std::string print_visible_sensor_activity2(
-			const typename Layer<P>::Active_Visible_Sensors& sensor_activity1,
-			const typename Layer<P>::Active_Sensors& sensor_activity2,
+			const typename Layer_Fluent<P>::Active_Visible_Sensors& sensor_activity1,
+			const typename Layer_Fluent<P>::Active_Sensors& sensor_activity2,
 			const int width)
 		{
 			std::ostringstream result;
@@ -345,7 +345,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_boost_factors(
-			const Layer<P>& layer,
+			const Layer_Persisted<P>& layer,
 			const int width)
 		{
 			std::ostringstream result;
@@ -368,7 +368,7 @@ namespace htm
 
 		template <typename P>
 		std::string print_dd_synapses(
-			const Layer<P>& layer,
+			const Layer_Persisted<P>& layer,
 			const int column_i)
 		{
 			std::ostringstream result;
@@ -403,7 +403,7 @@ namespace htm
 		
 		template <typename P>
 		std::string print_dd_synapses(
-			const Layer<P>& layer)
+			const Layer_Persisted<P>& layer)
 		{
 			std::ostringstream result;
 			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)

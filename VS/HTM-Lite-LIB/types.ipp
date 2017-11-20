@@ -610,8 +610,10 @@ namespace htm
 		};
 
 		//========================================================================
+		
+		// Fluent properties of a layer, the non learned states
 		template <typename P>
-		struct Layer
+		struct Layer_Fluent
 		{
 			using Active_Cells = Bitset_Hist8<P::N_CELLS, P::HISTORY_SIZE + 1>;
 			using Winner_Cells = History<Bitset_Sparse<P::N_CELLS>, P::HISTORY_SIZE + 1>;
@@ -624,7 +626,6 @@ namespace htm
 			//Pseudo random number used only by the column.
 			std::vector<unsigned int> random_number;
 
-
 			Active_Cells active_cells; //32MB for 1M columns times History
 			Winner_Cells winner_cells;
 
@@ -634,6 +635,39 @@ namespace htm
 			//Segments that currently and previously are matching.
 			std::vector<Matching_Segments> matching_dd_segments = std::vector<Matching_Segments>(P::N_COLUMNS);
 
+			#pragma region Used by SP only
+			//Number of iterations.
+			int iteration_num = 0;
+
+			//Number of iterations while learning.
+			int iteration_learn_num = 0;
+
+			#pragma region Used by TP only
+			Active_Sensors active_sensors;
+			Active_Columns active_columns;
+			#pragma endregion 
+
+			//moving average denoting the frequency of column activation: used by boosting
+			std::vector<float> sp_active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+
+			//moving average denoting the frequency of the column's overlap value being at least equal to the proximal segment activation threshold
+			std::vector<float> sp_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+			std::vector<float> sp_min_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
+
+			// default constructor
+			Layer_Fluent()
+			{
+				this->random_number = std::vector<unsigned int>(P::N_COLUMNS);
+				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
+			}
+		};
+
+		//========================================================================
+		template <typename P>
+		struct Layer_Persisted
+		{
+			Layer_Fluent<P> fluent;
+
 			//Number of segments this column currently has in use.
 			std::vector<int> dd_segment_count = std::vector<int>(P::N_COLUMNS);
 
@@ -642,8 +676,6 @@ namespace htm
 
 			//Last time step synapse was active.
 			std::vector<std::vector<int>> dd_synapse_active_time = std::vector<std::vector<int>>(P::N_COLUMNS);
-
-
 
 			using t5 = std::vector<std::vector<Permanence, priv::Allocator<Permanence>>>;
 			//Permanence of the synapses of the the provided segment index.
@@ -655,15 +687,6 @@ namespace htm
 
 			//Number of synapses this column currently has in use; this int is smaller than TP_N_DD_SYNAPSES.
 			std::vector<std::vector<int>> dd_synapse_count_sf = std::vector<std::vector<int>>(P::N_COLUMNS);
-
-
-
-			#pragma region Used by SP only
-			//Number of iterations.
-			int iteration_num = 0;
-
-			//Number of iterations while learning.
-			int iteration_learn_num = 0;
 
 			//Current boost factor.
 			std::vector<float> boost_factor = std::vector<float>(P::N_COLUMNS, 1.0f);
@@ -691,26 +714,9 @@ namespace htm
 			std::vector<int> sp_pd_synapse_count_sb;
 			#pragma endregion
 
-			//moving average denoting the frequency of column activation: used by boosting
-			std::vector<float> sp_active_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
-
-			//moving average denoting the frequency of the column's overlap value being at least equal to the proximal segment activation threshold
-			std::vector<float> sp_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
-			std::vector<float> sp_min_overlap_duty_cycles = std::vector<float>(P::N_COLUMNS, 0.0f);
-
-			#pragma endregion
-
-			#pragma region Used by TP only
-			Active_Sensors active_sensors;
-			Active_Columns active_columns;
-			#pragma endregion 
-
 			// default constructor
-			Layer()
+			Layer_Persisted()
 			{
-				this->random_number = std::vector<unsigned int>(P::N_COLUMNS);
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
-
 				if (P::SP_SYNAPSE_FORWARD)
 				{
 					this->sp_pd_synapse_permanence_sf = std::vector<t1>(P::N_COLUMNS, t1(P::SP_N_PD_SYNAPSES, P::SP_PD_CONNECTED_THRESHOLD));
@@ -724,6 +730,7 @@ namespace htm
 				}
 			}
 		};
+
 
 		#pragma region Copy
 

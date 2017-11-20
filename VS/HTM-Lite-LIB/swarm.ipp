@@ -325,7 +325,7 @@ namespace htm
 			template <typename P>
 			void do_work(
 				const DataStream<P>& datastream,
-				Layer<P>& layer,
+				Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 				Swarm_Options& options,
 				Configuration<1>& result)
 			{
@@ -334,8 +334,8 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 					auto total_mismatch = std::vector<int>(1);
 
-					htm::layer::init(layer, result.param[0]);
-					htm::layer::run(datastream, result.param[0], layer, total_mismatch);
+					htm::layer::init(layer_fluent, layer, result.param[0]);
+					htm::layer::run(datastream, result.param[0], layer_fluent, layer, total_mismatch);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
@@ -350,8 +350,8 @@ namespace htm
 			template <typename P1, typename P2>
 			void do_work(
 				const DataStream<P1>& datastream,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
+				Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+				Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
 				const Swarm_Options& options,
 				Configuration<2>& result)
 			{
@@ -360,9 +360,9 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 					auto total_mismatch = std::vector<int>(1);
 
-					htm::layer::init(layer1, result.get_param(0));
-					htm::layer::init(layer2, result.get_param(1));
-					htm::network::run(datastream, result.param, layer1, layer2, total_mismatch);
+					htm::layer::init(layer1_fluent, layer1, result.get_param(0));
+					htm::layer::init(layer2_fluent, layer2, result.get_param(1));
+					htm::network::run(datastream, result.param, layer1_fluent, layer1, layer2_fluent, layer2, total_mismatch);
 
 					if (result.mismatch != Configuration<2>::MISMATCH_INVALID)
 					{
@@ -377,9 +377,9 @@ namespace htm
 			template <typename P1, typename P2, typename P3>
 			void do_work(
 				const DataStream<P1>& datastream,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
-				Layer<P3>& layer3,
+				Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+				Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
+				Layer_Fluent<P3>& layer3_fluent, Layer_Persisted<P3>& layer3,
 				const Swarm_Options& options,
 				Configuration<3>& result)
 			{
@@ -388,10 +388,10 @@ namespace htm
 					result.flag = true; // using std::atomic_flag would be better...
 					auto total_mismatch = std::vector<int>(1);
 
-					htm::layer::init(layer1, result.get_param(0));
-					htm::layer::init(layer2, result.get_param(1));
-					htm::layer::init(layer3, result.get_param(2));
-					htm::network::run(datastream, result.param, layer1, layer2, layer3, total_mismatch);
+					htm::layer::init(layer1_fluent, layer1, result.get_param(0));
+					htm::layer::init(layer2_fluent, layer2, result.get_param(1));
+					htm::layer::init(layer3_fluent, layer3, result.get_param(2));
+					htm::network::run(datastream, result.param, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3, total_mismatch);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
@@ -410,11 +410,12 @@ namespace htm
 				Swarm_Options& options,
 				std::vector<Configuration<1>>& results)
 			{
-				Layer<P> layer;
+				Layer_Fluent<P> layer_fluent;
+				Layer_Persisted<P> layer;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(datastream, layer, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer_fluent, layer, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer_fluent, layer, options, results[i]);
 			}
 
 			template <typename P1, typename P2>
@@ -424,12 +425,14 @@ namespace htm
 				Swarm_Options& options,
 				std::vector<Configuration<2>>& results)
 			{
-				Layer<P1> layer1;
-				Layer<P2> layer2;
+				Layer_Fluent<P1> layer1_fluent;
+				Layer_Persisted<P1> layer1;
+				Layer_Fluent<P2> layer2_fluent;
+				Layer_Persisted<P2> layer2;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1, layer2, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1, layer2, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1_fluent, layer1, layer2_fluent, layer2, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1_fluent, layer1, layer2_fluent, layer2, options, results[i]);
 			}
 
 			template <typename P1, typename P2, typename P3>
@@ -439,13 +442,16 @@ namespace htm
 				Swarm_Options& options,
 				std::vector<Configuration<3>>& results)
 			{
-				Layer<P1> layer1;
-				Layer<P2> layer2;
-				Layer<P3> layer3;
+				Layer_Fluent<P1> layer1_fluent;
+				Layer_Persisted<P1> layer1;
+				Layer_Fluent<P2> layer2_fluent;
+				Layer_Persisted<P2> layer2;
+				Layer_Fluent<P3> layer3_fluent;
+				Layer_Persisted<P3> layer3;
 				const int nResults = static_cast<int>(results.size());
 
-				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1, layer2, layer3, options, results[i]);
-				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1, layer2, layer3, options, results[i]);
+				for (int i = start_pos; i < nResults; ++i) do_work(datastream, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3, options, results[i]);
+				for (int i = 0; i < nResults; ++i) do_work(datastream, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3, options, results[i]);
 			}
 		}
 

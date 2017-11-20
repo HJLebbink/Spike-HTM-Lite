@@ -42,26 +42,26 @@ namespace htm
 			void one_step(
 				const std::array<Dynamic_Param, 2>& param,
 				const int time,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2)
+				Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+				Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2)
 			{
 				static_assert(P1::N_COLUMNS == P2::N_SENSORS, "ERROR: layer1 and layer2 are not matched.");
 				{
 					//2] concat previous layer 2 columns to become hidden sensors in layer 1
 					for (int i = 0; i < P1::N_HIDDEN_SENSORS; ++i)
 					{
-						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
+						layer1_fluent.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2_fluent.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
-					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1_fluent.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer1_fluent.active_sensors, layer1_fluent, layer1, time, param[0]);
 				}
 				{
 					for (int i = 0; i < P2::N_HIDDEN_SENSORS; ++i)
 					{
-						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer1.active_columns.get(i));
+						layer2_fluent.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer1_fluent.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
-					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2_fluent.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer2_fluent.active_sensors, layer2_fluent, layer2, time, param[1]);
 				}
 			}
 
@@ -69,41 +69,41 @@ namespace htm
 			void one_step(
 				const std::array<Dynamic_Param, 3>& param, 
 				const int time,
-				Layer<P1>& layer1,
-				Layer<P2>& layer2,
-				Layer<P3>& layer3)
+				Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+				Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
+				Layer_Fluent<P3>& layer3_fluent, Layer_Persisted<P3>& layer3)
 			{
 				{
 					//Previous layer 2 columns become hidden sensors in layer 1
 					for (int i = 0; i < P1::N_HIDDEN_SENSORS; ++i)
 					{
-						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
+						layer1_fluent.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2_fluent.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
-					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1_fluent.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer1_fluent.active_sensors, layer1_fluent, layer1, time, param[0]);
 				}
 				{
 					//Previous layer 1 columns become visible sensors in layer 2
 					for (int i = 0; i < P2::N_VISIBLE_SENSORS; ++i)
 					{
-						layer2.active_sensors.set(i, layer1.active_columns.get(i));
+						layer2_fluent.active_sensors.set(i, layer1_fluent.active_columns.get(i));
 					}
 					//Previous layer 3 columns become hidden sensors in layer 2
 					for (int i = 0; i < P2::N_HIDDEN_SENSORS; ++i)
 					{
-						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer3.active_columns.get(i));
+						layer2_fluent.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer3_fluent.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
-					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2_fluent.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer2_fluent.active_sensors, layer2_fluent, layer2, time, param[1]);
 				}
 				{
 					//Previous layer 2 columns become hidden sensors in layer 3
 					for (int i = 0; i < P3::N_VISIBLE_SENSORS; ++i)
 					{
-						layer3.active_sensors.set(i, layer2.active_columns.get(i));
+						layer3_fluent.active_sensors.set(i, layer2_fluent.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_active_sensors<P3>(layer3.active_sensors, param[2].n_visible_sensors_dim1), "\n");
-					layer::one_step(layer3.active_sensors, layer3, time, param[2]);
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_active_sensors<P3>(layer3_fluent.active_sensors, param[2].n_visible_sensors_dim1), "\n");
+					layer::one_step(layer3_fluent.active_sensors, layer3_fluent, layer3, time, param[2]);
 				}
 			}
 		}
@@ -151,8 +151,8 @@ namespace htm
 		void run(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
-			Layer<P1>& layer1,
-			Layer<P2>& layer2,
+			Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1, 
+			Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
 			//out
 			std::vector<int>& prediction_mismatch)
 		{
@@ -165,15 +165,15 @@ namespace htm
 
 			for (auto time = 0; time < param0.n_time_steps; ++time)
 			{
-				datastream.current_sensors(layer1.active_sensors);
-				encoder::add_sensor_noise<P1>(layer1.active_sensors);
-				priv::one_step(param, time, layer1, layer2);
+				datastream.current_sensors(layer1_fluent.active_sensors);
+				encoder::add_sensor_noise<P1>(layer1_fluent.active_sensors);
+				priv::one_step(param, time, layer1_fluent, layer1, layer2_fluent, layer2);
 
 				if (n_futures > 0)
 				{
-					layer::priv::calc_mismatch(time, layer1, param0, datastream, current_mismatch);
+					layer::priv::calc_mismatch(time, layer1_fluent, layer1, param0, datastream, current_mismatch);
 					tools::add(prediction_mismatch, current_mismatch);
-					layer::display_info(datastream, layer1, time, param0, current_mismatch, mismatch);
+					layer::display_info(datastream, layer1_fluent, layer1, time, param0, current_mismatch, mismatch);
 				}
 				datastream.advance_time();
 			}
@@ -185,8 +185,8 @@ namespace htm
 		void run_multiple_times(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
-			Layer<P1>& layer1,
-			Layer<P2>& layer2,
+			Layer_Fluent<P1> layer1_fluent, Layer_Persisted<P1>& layer1,
+			Layer_Fluent<P2> layer2_fluent, Layer_Persisted<P2>& layer2,
 			//out
 			std::vector<int>& prediction_mismatch)
 		{
@@ -195,9 +195,9 @@ namespace htm
 			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param[0].n_times; ++i)
 			{
-				layer::init(layer1, param[0]);
-				layer::init(layer2, param[1]);
-				run(datastream, param, layer1, layer2, mismatch);
+				layer::init(layer1_fluent, layer1, param[0]);
+				layer::init(layer2_fluent, layer2, param[1]);
+				run(datastream, param, layer1_fluent, layer1, layer2_fluent, layer2, mismatch);
 				tools::add(prediction_mismatch, mismatch);
 			}
 		}
@@ -206,9 +206,9 @@ namespace htm
 		void run(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
-			Layer<P1>& layer1,
-			Layer<P2>& layer2,
-			Layer<P3>& layer3,
+			Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+			Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
+			Layer_Fluent<P3>& layer3_fluent, Layer_Persisted<P3>& layer3,
 			std::vector<int>& prediction_mismatch)
 		{
 			const auto param0 = param[0];
@@ -220,15 +220,15 @@ namespace htm
 
 			for (auto time = 0; time < param0.n_time_steps; ++time)
 			{
-				datastream.current_sensors(layer1.active_sensors);
-				encoder::add_sensor_noise<P1>(layer1.active_sensors);
-				priv::one_step(param, time, layer1, layer2, layer3);
+				datastream.current_sensors(layer1_fluent.active_sensors);
+				encoder::add_sensor_noise<P1>(layer1_fluent.active_sensors);
+				priv::one_step(param, time, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3);
 
 				if (n_futures > 0)
 				{
-					layer::priv::calc_mismatch(time, layer1, param0, datastream, current_mismatch);
+					layer::priv::calc_mismatch(time, layer1_fluent, layer1, param0, datastream, current_mismatch);
 					tools::add(prediction_mismatch, current_mismatch);
-					layer::display_info(datastream, layer1, time, param0, current_mismatch, mismatch);
+					layer::display_info(datastream, layer1_fluent, layer1, time, param0, current_mismatch, mismatch);
 				}
 				datastream.advance_time();
 			}
@@ -240,9 +240,9 @@ namespace htm
 		void run_multiple_times(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
-			Layer<P1>& layer1,
-			Layer<P2>& layer2,
-			Layer<P3>& layer3,
+			Layer_Fluent<P1>& layer1_fluent, Layer_Persisted<P1>& layer1,
+			Layer_Fluent<P2>& layer2_fluent, Layer_Persisted<P2>& layer2,
+			Layer_Fluent<P3>& layer3_fluent, Layer_Persisted<P3>& layer3,
 			std::vector<int>& prediction_mismatch)
 		{
 			tools::clear(prediction_mismatch);
@@ -250,10 +250,10 @@ namespace htm
 			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param[0].n_times; ++i)
 			{
-				layer::init(layer1, param[0]);
-				layer::init(layer2, param[1]);
-				layer::init(layer3, param[2]);
-				run(datastream, param, layer1, layer2, layer3, mismatch);
+				layer::init(layer1_fluent, layer1, param[0]);
+				layer::init(layer2_fluent, layer2, param[1]);
+				layer::init(layer3_fluent, layer3, param[2]);
+				run(datastream, param, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3, mismatch);
 				tools::add(prediction_mismatch, mismatch);
 			}
 		}

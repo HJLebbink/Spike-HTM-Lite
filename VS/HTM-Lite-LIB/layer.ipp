@@ -54,18 +54,19 @@ namespace htm
 					//Synapse backwards
 					template <typename P>
 					void get_predicted_sensors_sb_ref(
-						const Layer<P>& layer,
+						const Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
 						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer_Fluent<P>::Active_Visible_Sensors& predicted_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
-						Layer<P>::Active_Columns predicted_columns;
+						Layer_Fluent<P>::Active_Columns predicted_columns;
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							predicted_columns.set(column_i, layer.active_dd_segments[column_i].any_current());
+							predicted_columns.set(column_i, layer_fluent.active_dd_segments[column_i].any_current());
 						}
 
 						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
@@ -103,10 +104,11 @@ namespace htm
 					// predicts sensors one steps into the future
 					template <typename P>
 					void get_predicted_sensors_sf_ref(
-						const Layer<P>& layer,
+						const Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
 						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_visible_sensor)
+						typename Layer_Fluent<P>::Active_Visible_Sensors& predicted_visible_sensor)
 					{
 						//log_INFO("get_predicted_sensors_sf_ref: active_sensors:\n", print::print_active_sensors<P>(active_sensors, param.n_visible_sensors_dim1));
 
@@ -114,7 +116,7 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const bool column_is_predicted = layer.active_dd_segments[column_i].any_current();
+							const bool column_is_predicted = layer_fluent.active_dd_segments[column_i].any_current();
 							if (column_is_predicted)
 							{
 								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
@@ -143,16 +145,16 @@ namespace htm
 					template <typename P>
 					void get_predicted_sensors_sf_multifuture_ref(
 						const int time,
-						const typename Layer<P>::Active_Sensors& active_sensors,
-						Layer<P>& layer, //TODO: add const, sp needs to have an non const layer
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
+						const Layer_Fluent<P>& layer_fluent, const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
 						//out
-						typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+						typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
 					{
 						const int n_futures = static_cast<int>(predicted_visible_sensor.size());
 						auto predicted_sensor_activity = std::vector<int>(P::N_SENSORS, 0);
-						typename Layer<P>::Active_Sensors predicted_sensors = typename Layer<P>::Active_Sensors(active_sensors);
-						typename Layer<P>::Active_Columns predicted_columns;
+						typename Layer_Fluent<P>::Active_Sensors predicted_sensors = typename Layer_Fluent<P>::Active_Sensors(active_sensors);
+						typename Layer_Fluent<P>::Active_Columns predicted_columns;
 
 						//log_INFO("get_predicted_sensors_sf_multifuture_ref: active_sensors:\n", print::print_active_sensors<P>(layer.active_sensors, param.n_visible_sensors_dim1));
 
@@ -164,7 +166,7 @@ namespace htm
 
 							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 							{
-								const bool column_is_predicted = layer.active_dd_segments[column_i].any_current();
+								const bool column_is_predicted = layer_fluent.active_dd_segments[column_i].any_current();
 								//const bool column_is_predicted = predicted_columns.get(column_i);
 								if (column_is_predicted)
 								{
@@ -199,25 +201,26 @@ namespace htm
 					template <typename P>
 					void get_predicted_sensors_sf_ref(
 						const int time,
-						Layer<P>& layer, //TODO: add const
+						Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
 						//out
-						typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+						typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
 					{
 						if (predicted_visible_sensor.size() == 1)
-							get_predicted_sensors_sf_ref(layer, param, predicted_visible_sensor[0]);
+							get_predicted_sensors_sf_ref(layer_fluent, layer, param, predicted_visible_sensor[0]);
 							//get_predicted_sensors_sf_multifuture_ref(layer.active_sensors, layer, time, param, predicted_visible_sensor);
 						else
-							get_predicted_sensors_sf_multifuture_ref(time, layer.active_sensors, layer, param, predicted_visible_sensor);
+							get_predicted_sensors_sf_multifuture_ref(time, layer_fluent.active_sensors, layer_fluent, layer, param, predicted_visible_sensor);
 					}
 
 					template <typename P>
 					void get_predicted_sensors_sf_future_X(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const int future,
 						const Dynamic_Param& param,
 						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_visible_sensor)
+						typename Layer_Fluent<P>::Active_Visible_Sensors& predicted_visible_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 						auto& active_cells = layer.active_cells;
@@ -292,20 +295,21 @@ namespace htm
 				template <typename P>
 				void d(
 					const int time,
-					Layer<P>& layer, //TODO add const
+					Layer_Fluent<P>& layer_fluent,
+					const Layer_Persisted<P>& layer,
 					const Dynamic_Param& param,
 					//out
-					typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_sensors)
+					typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(time, layer, param, predicted_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(time, layer, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(time, layer_fluent, layer, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(time, layer_fluent, layer, param, predicted_sensors);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer, param, predicted_sensors[0]);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer, param, predicted_sensors[0]);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer_fluent, layer, param, predicted_sensors[0]);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer_fluent, layer, param, predicted_sensors[0]);
 					}
 				}
 			}
@@ -313,7 +317,8 @@ namespace htm
 			template <typename P>
 			void calc_mismatch(
 				const int time,
-				Layer<P>& layer, // TODO add const
+				Layer_Fluent<P>& layer_fluent,
+				const Layer_Persisted<P>& layer,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
 				//out
@@ -321,11 +326,11 @@ namespace htm
 			{
 				const int n_futures = static_cast<int>(mismatch.size());
 
-				typename std::vector<Layer<P>::Active_Sensors> actual_sensors(n_futures);
-				typename std::vector<Layer<P>::Active_Visible_Sensors> predicted_sensors(n_futures);
+				typename std::vector<Layer_Fluent<P>::Active_Sensors> actual_sensors(n_futures);
+				typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors> predicted_sensors(n_futures);
 
 				datastream.future_sensors(actual_sensors);
-				get_predicted_sensors::d(time, layer, param, predicted_sensors);
+				get_predicted_sensors::d(time, layer_fluent, layer, param, predicted_sensors);
 
 				for (auto future = 0; future < n_futures; ++future)
 				{
@@ -347,9 +352,9 @@ namespace htm
 
 			template <typename P>
 			void load_inferred_sensor_activity(
-				const Layer<P>& layer,
+				const Layer_Persisted<P>& layer,
 				const Dynamic_Param& param,
-				const typename Layer<P>::Active_Columns& active_columns,
+				const typename Layer_Fluent<P>::Active_Columns& active_columns,
 				// out
 				std::vector<int>& inferred_sensor_activity)
 			{
@@ -376,22 +381,23 @@ namespace htm
 			template <typename P>
 			void show_input_and_prediction(
 				const int time,
-				Layer<P>& layer, //TODO: add const
+				Layer_Fluent<P>& layer_fluent,
+				const Layer_Persisted<P>& layer,
 				const int n_futures,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
-				const typename Layer<P>::Active_Columns& active_columns)
+				const typename Layer_Fluent<P>::Active_Columns& active_columns)
 			{
 				if ((time % param.show_input_and_prediction_interval) == 0)
 				{
 					if (true) //print predicted visible sensor activity
 					{
-						typename std::vector<Layer<P>::Active_Visible_Sensors> active_visible_sensors(n_futures);
-						typename std::vector<Layer<P>::Active_Sensors> active_sensors(n_futures);
+						typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors> active_visible_sensors(n_futures);
+						typename std::vector<Layer_Fluent<P>::Active_Sensors> active_sensors(n_futures);
 
 						std::cout << "=====" << std::endl;
 
-						get_predicted_sensors::d(time, layer, param, active_visible_sensors);
+						get_predicted_sensors::d(time, layer_fluent, layer, param, active_visible_sensors);
 						datastream.future_sensors(active_sensors);
 
 						for (auto future = 0; future < n_futures; ++future)
@@ -416,7 +422,7 @@ namespace htm
 
 			template <typename P>
 			void show_mismatch(
-				Layer<P>& layer, //TODO: add const
+				const Layer_Persisted<P>& layer,
 				const int time,
 				const Dynamic_Param& param,
 				std::vector<int>& mismatch)
@@ -451,33 +457,35 @@ namespace htm
 
 			template <bool LEARN, typename P>
 			void one_step(
-				const typename Layer<P>::Active_Sensors& active_sensors,
-				Layer<P>& layer,
+				const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
+				Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 				const int time,
 				const Dynamic_Param& param)
 			{
-				layer.active_cells.advance_time();
-				layer.winner_cells.advance_time();
+				layer_fluent.active_cells.advance_time();
+				layer_fluent.winner_cells.advance_time();
 
 				sp::compute_sp<LEARN>(
 					active_sensors,
+					layer_fluent,
 					layer,
 					param,
 					//out
-					layer.active_columns);
+					layer_fluent.active_columns);
 
 				tp::compute_tp<LEARN>(
+					layer_fluent,
 					layer,
 					time,
 					param,
 					//in
-					layer.active_columns,
+					layer_fluent.active_columns,
 					//inout
-					layer.active_cells,
-					layer.winner_cells);
+					layer_fluent.active_cells,
+					layer_fluent.winner_cells);
 
 				#if _DEBUG
-				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
+				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.fluent.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
 				if (false) log_INFO("layer:run: dd_synapes at t = ", time, ": ", print::print_dd_synapses(layer), "\n");
 				#endif
 			}
@@ -485,7 +493,7 @@ namespace htm
 
 		//Reset the provided layer with the properties as provided in param
 		template <typename P>
-		void init(Layer<P>& layer, const Dynamic_Param& param)
+		void init(Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer, const Dynamic_Param& param)
 		{
 			// reset pd synapses
 			if (P::SP_SYNAPSE_FORWARD)
@@ -494,7 +502,7 @@ namespace htm
 				{
 					auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
 					auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
-					unsigned int random_number = layer.random_number[column_i];
+					unsigned int random_number = layer_fluent.random_number[column_i];
 
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
@@ -502,7 +510,7 @@ namespace htm
 						synapse_origin[synapse_i] = random_sensor;
 						synapse_permanence[synapse_i] = param.SP_PD_PERMANENCE_INIT;
 					}
-					layer.random_number[column_i] = random_number;
+					layer_fluent.random_number[column_i] = random_number;
 				}
 			}
 			else
@@ -517,7 +525,7 @@ namespace htm
 				{
 					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
-						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, layer.random_number[column_i]);
+						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, layer_fluent.random_number[column_i]);
 
 						auto& destination = layer.sp_pd_destination_column_sb[random_sensor];
 						auto& permanence = layer.sp_pd_synapse_permanence_sb[random_sensor];
@@ -546,35 +554,36 @@ namespace htm
 				layer.dd_synapse_count_sf[column_i].clear();
 				layer.dd_synapse_permanence_sf[column_i].clear();
 				layer.dd_synapse_delay_origin_sf[column_i].clear();
-				layer.dd_synapse_active_time[column_i].clear();
+				layer_fluent.dd_synapse_active_time[column_i].clear();
 
 				// reset activity
-				layer.active_dd_segments[column_i].reset();
-				layer.matching_dd_segments[column_i].reset();
+				layer_fluent.active_dd_segments[column_i].reset();
+				layer_fluent.matching_dd_segments[column_i].reset();
 			}
 
 			// reset global state
-			layer.active_cells.reset();
-			layer.winner_cells.reset();
+			layer_fluent.active_cells.reset();
+			layer_fluent.winner_cells.reset();
 		}
 
 		template <typename P>
 		void one_step(
-			const typename Layer<P>::Active_Sensors& active_sensors,
-			Layer<P>& layer,
+			const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
+			Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 			const int time,
 			const Dynamic_Param& param)
 		{
 			if (param.learn)
-				priv::one_step<true>(active_sensors, layer, time, param);
+				priv::one_step<true>(active_sensors, layer_fluent, layer, time, param);
 			else
-				priv::one_step<false>(active_sensors, layer, time, param);
+				priv::one_step<false>(active_sensors, layer_fluent, layer, time, param);
 		}
 
 		template <typename P>
 		void display_info(
 			const DataStream<P>& datastream,
-			Layer<P>& layer, //TODO: add const
+			Layer_Fluent<P>& layer_fluent,
+			const Layer_Persisted<P>& layer,
 			const int time,
 			const Dynamic_Param& param,
 			const std::vector<int>& current_mismatch,
@@ -590,7 +599,7 @@ namespace htm
 				}
 				if (param.show_input_and_prediction_interval > 0)
 				{
-					priv::show_input_and_prediction(time, layer, 1, param, datastream, layer.active_columns);
+					priv::show_input_and_prediction(time, layer_fluent, layer, 1, param, datastream, layer_fluent.active_columns);
 				}
 			}
 		}
@@ -600,7 +609,7 @@ namespace htm
 		void run(
 			const DataStream<P>& datastream,
 			const Dynamic_Param& param,
-			Layer<P>& layer,
+			Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 			//out
 			std::vector<int>& prediction_mismatch)
 		{
@@ -612,15 +621,15 @@ namespace htm
 
 			for (auto time = 0; time < param.n_time_steps; ++time)
 			{
-				datastream.current_sensors(layer.active_sensors);
-				encoder::add_sensor_noise<P>(layer.active_sensors);
-				one_step(layer.active_sensors, layer, time, param);
+				datastream.current_sensors(layer_fluent.active_sensors);
+				encoder::add_sensor_noise<P>(layer_fluent.active_sensors);
+				one_step(layer_fluent.active_sensors, layer_fluent, layer, time, param);
 
 				if (n_futures > 0)
 				{
-					layer::priv::calc_mismatch(time, layer, param, datastream, current_mismatch);
+					layer::priv::calc_mismatch(time, layer_fluent, layer, param, datastream, current_mismatch);
 					tools::add(prediction_mismatch, current_mismatch);
-					layer::display_info(datastream, layer, time, param, current_mismatch, mismatch);
+					layer::display_info(datastream, layer_fluent, layer, time, param, current_mismatch, mismatch);
 				}
 				datastream.advance_time();
 			}
@@ -631,7 +640,7 @@ namespace htm
 		template <typename P>
 		void run_multiple_times(
 			const DataStream<P>& datastream,
-			Layer<P>& layer,
+			Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 			const Dynamic_Param& param,
 			//out
 			std::vector<int>& prediction_mismatch)
@@ -641,9 +650,9 @@ namespace htm
 			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param.n_times; ++i)
 			{
-				init(layer, param);
+				init(layer_fluent, layer, param);
 				datastream.reset_time();
-				run(datastream, param, layer, mismatch);
+				run(datastream, param, layer_fluent, layer, mismatch);
 				tools::add(prediction_mismatch, mismatch);
 			}
 		}

@@ -49,7 +49,7 @@ namespace htm
 				void active_columns_ref1(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					typename Layer<P>::Active_Columns& active_columns)
+					typename Layer_Fluent<P>::Active_Columns& active_columns)
 				{
 					for (int column_i1 = 0; column_i1 < P::N_COLUMNS; ++column_i1)
 					{
@@ -69,7 +69,7 @@ namespace htm
 				void active_columns_ref2(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					typename Layer<P>::Active_Columns& active_columns)
+					typename Layer_Fluent<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 
@@ -89,7 +89,7 @@ namespace htm
 						if (best_i != -1) active_columns.set(best_i);
 					}
 					#if _DEBUG
-					Layer<P>::Active_Columns active_columns2;
+					Layer_Fluent<P>::Active_Columns active_columns2;
 					active_columns_ref1(boosted_overlap, inhibition_top, active_columns2);
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 					{
@@ -107,7 +107,7 @@ namespace htm
 				void active_columns_ref3(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					typename Layer<P>::Active_Columns& active_columns)
+					typename Layer_Fluent<P>::Active_Columns& active_columns)
 				{
 					active_columns.reset();
 					std::vector<float> tmp = std::vector<float>(boosted_overlap);
@@ -133,7 +133,7 @@ namespace htm
 					}
 
 					#if _DEBUG
-					Layer<P>::Active_Columns active_columns2;
+					Layer_Fluent<P>::Active_Columns active_columns2;
 					active_columns_ref1(boosted_overlap, inhibition_top, active_columns2);
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 					{
@@ -151,7 +151,7 @@ namespace htm
 				void active_columns_ref4(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const int inhibition_top,
-					typename Layer<P>::Active_Columns& active_columns)
+					typename Layer_Fluent<P>::Active_Columns& active_columns)
 				{
 					active_columns.clear_all();
 					std::vector<float> boosted_overlap_copy = std::vector<float>(boosted_overlap);
@@ -167,7 +167,7 @@ namespace htm
 					#if _DEBUG
 					if (false) // it seems ref1 does not always yield the same results as ref4
 					{
-						Layer<P>::Active_Columns active_columns2;
+						Layer_Fluent<P>::Active_Columns active_columns2;
 						active_columns_ref1<P>(boosted_overlap, inhibition_top, active_columns2);
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) if (active_columns2.get(column_i) != active_columns.get(column_i))
 						{
@@ -185,7 +185,7 @@ namespace htm
 				void d(
 					const std::vector<float>& boosted_overlap, //N_COLUMNS
 					const Dynamic_Param& param,
-					typename Layer<P>::Active_Columns& active_columns)
+					typename Layer_Fluent<P>::Active_Columns& active_columns)
 				{
 					const int inhibition_top = static_cast<int>(P::N_COLUMNS * param.SP_LOCAL_AREA_DENSITY);
 
@@ -212,9 +212,9 @@ namespace htm
 					//Calculate overlap iterator over sensors
 					template <typename P>
 					void calc_overlap_sb_ref(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 						//out
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -248,9 +248,9 @@ namespace htm
 
 					template <typename P>
 					void calc_overlap_sf_ref(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 						//out
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -312,9 +312,9 @@ namespace htm
 
 					template <typename P>
 					void calc_overlap_sf_avx512(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps) //size = P::N_COLUMNS
 					{
@@ -378,9 +378,9 @@ namespace htm
 					// P::N_SENSORS < 512
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi32(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps)
 					{
@@ -451,9 +451,9 @@ namespace htm
 					// P::N_SENSORS < 512: not much faster than calc_overlap_avx512_small_epi32
 					template <typename P>
 					void calc_overlap_avx512_sf_small_epi16(
-						const Layer<P>& layer,
+						const Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Sensors& active_sensors,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 						//out 
 						std::vector<int>& overlaps)
 					{
@@ -520,9 +520,9 @@ namespace htm
 
 				template <typename P>
 				void d(
-					const Layer<P>& layer,
+					const Layer_Persisted<P>& layer,
 					const Dynamic_Param& param,
-					const typename Layer<P>::Active_Sensors& active_sensors,
+					const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
 					//out
 					std::vector<int>& overlaps) //size = P::N_COLUMNS
 				{
@@ -572,10 +572,10 @@ namespace htm
 					//Update synapses iterator over sensors.
 					template <typename P>
 					void update_synapses_sb_ref(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Columns& active_columns,
-						const typename Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer_Fluent<P>::Active_Columns& active_columns,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 					{
 						for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 						{
@@ -602,10 +602,10 @@ namespace htm
 
 					template <typename P>
 					void update_synapses_is_avx512(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Columns& active_columns,
-						const typename Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer_Fluent<P>::Active_Columns& active_columns,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 					{
 						//TODO: Code has a bug!
 
@@ -673,10 +673,10 @@ namespace htm
 					//Update synapses iterator over column. When iterating over the columns, the sparsity of the culumns yields in less memory access.
 					template <typename P>
 					void update_synapses_sf_ref(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Active_Columns& active_columns,
-						const typename Layer<P>::Active_Sensors& active_sensors)
+						const typename Layer_Fluent<P>::Active_Columns& active_columns,
+						const typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 					{
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
@@ -705,10 +705,10 @@ namespace htm
 
 				template <typename P>
 				void d(
-					Layer<P>& layer,
+					Layer_Persisted<P>& layer,
 					const Dynamic_Param& param,
-					const typename Layer<P>::Active_Columns& active_columns,
-					const typename Layer<P>::Active_Sensors& active_sensors)
+					const typename Layer_Fluent<P>::Active_Columns& active_columns,
+					const typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
@@ -739,20 +739,20 @@ namespace htm
 			*/
 			template <typename P>
 			void update_duty_cycles(
-				Layer<P>& layer,
+				Layer_Fluent<P>& layer_fluent,
 				const int column_i,
 				const int overlap,
 				const bool active_column)
 			{
 				//Checked: 20-09-17
-				const int period = (P::SP_DUTY_CYCLE_PERIOD > layer.iteration_num) ? layer.iteration_num : P::SP_DUTY_CYCLE_PERIOD;
-				layer.sp_overlap_duty_cycles[column_i] = ((layer.sp_overlap_duty_cycles[column_i] * (period - 1) + ((overlap > 0) ? 1 : 0)) / period);
-				layer.sp_active_duty_cycles[column_i] = ((layer.sp_active_duty_cycles[column_i] * (period - 1) + ((active_column) ? 1 : 0)) / period);
+				const int period = (P::SP_DUTY_CYCLE_PERIOD > layer_fluent.iteration_num) ? layer_fluent.iteration_num : P::SP_DUTY_CYCLE_PERIOD;
+				layer_fluent.sp_overlap_duty_cycles[column_i] = ((layer_fluent.sp_overlap_duty_cycles[column_i] * (period - 1) + ((overlap > 0) ? 1 : 0)) / period);
+				layer_fluent.sp_active_duty_cycles[column_i] = ((layer_fluent.sp_active_duty_cycles[column_i] * (period - 1) + ((active_column) ? 1 : 0)) / period);
 			}
 
 			template <typename P>
 			void update_boost_factors(
-				Layer<P>& layer,
+				Layer_Persisted<P>& layer,
 				const int column_i,
 				const Dynamic_Param& param,
 				const float active_duty_cycle)
@@ -788,7 +788,7 @@ namespace htm
 			//permanence values for such columns are increased.
 			template <typename P>
 			void bump_up_weak_columns(
-				Layer<P>& layer,
+				Layer_Persisted<P>& layer,
 				const Dynamic_Param& param,
 				const std::vector<float>& overlap_duty_cycle,
 				const std::vector<float>& min_overlap_duty_cycle)
@@ -816,7 +816,7 @@ namespace htm
 
 			template <typename P>
 			void update_inhibition_radius(
-				const Layer<P>& layer)
+				const Layer_Fluent<P>& layer)
 			{
 				if (P::SP_GLOBAL_INHIBITION)
 				{
@@ -830,7 +830,7 @@ namespace htm
 
 			template <typename P>
 			void update_min_duty_cycles(
-				Layer<P>& layer)
+				Layer_Fluent<P>& layer)
 			{
 				if (P::SP_GLOBAL_INHIBITION)
 				{
@@ -858,26 +858,26 @@ namespace htm
 			}
 
 			template <typename P>
-			bool is_update_round(const Layer<P>& layer)
+			bool is_update_round(const Layer_Fluent<P>& layer_fluent)
 			{
-				return (layer.iteration_num % P::SP_DUTY_CYCLE_PERIOD) == 0;
+				return (layer_fluent.iteration_num % P::SP_DUTY_CYCLE_PERIOD) == 0;
 			}
 		}
 
 		template <bool LEARN, typename P>
 		void compute_sp(
-			const typename Layer<P>::Active_Sensors& active_sensors,
-			Layer<P>& layer,
+			const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
+			Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
 			const Dynamic_Param& param,
 			//out
-			typename Layer<P>::Active_Columns& active_columns)
+			typename Layer_Fluent<P>::Active_Columns& active_columns)
 		{
 			//local variables
 			auto overlap_local = std::vector<int>(P::N_COLUMNS);
 			auto boosted_overlap_local = std::vector<float>(P::N_COLUMNS);
 
-			layer.iteration_num++;
-			if (LEARN) layer.iteration_learn_num++;
+			layer_fluent.iteration_num++;
+			if (LEARN) layer_fluent.iteration_learn_num++;
 
 			priv::calc_overlap::d(layer, param, active_sensors, overlap_local);
 
@@ -888,7 +888,7 @@ namespace htm
 				const int overlap = overlap_local[column_i];
 
 				//add a small random number seems to improve learning speed
-				const float r = random::rand_float(0.1f, layer.random_number[column_i]);
+				const float r = random::rand_float(0.1f, layer_fluent.random_number[column_i]);
 				boosted_overlap_local[column_i] = ((LEARN) ? (overlap * layer.boost_factor[column_i]) : overlap) + r;
 			}
 
@@ -907,16 +907,16 @@ namespace htm
 				{
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						priv::update_duty_cycles(layer, column_i, overlap_local[column_i], active_columns.get(column_i));
-						priv::update_boost_factors(layer, column_i, param, layer.sp_active_duty_cycles[column_i]);
+						priv::update_duty_cycles(layer_fluent, column_i, overlap_local[column_i], active_columns.get(column_i));
+						priv::update_boost_factors(layer, column_i, param, layer_fluent.sp_active_duty_cycles[column_i]);
 					}
 					if (false)
 					{
-						priv::bump_up_weak_columns(layer, param, layer.sp_overlap_duty_cycles, layer.sp_min_overlap_duty_cycles);
-						if (priv::is_update_round(layer))
+						priv::bump_up_weak_columns(layer, param, layer_fluent.sp_overlap_duty_cycles, layer_fluent.sp_min_overlap_duty_cycles);
+						if (priv::is_update_round(layer_fluent))
 						{
-							priv::update_inhibition_radius(layer);
-							priv::update_min_duty_cycles(layer);
+							priv::update_inhibition_radius(layer_fluent);
+							priv::update_min_duty_cycles(layer_fluent);
 						}
 					}
 

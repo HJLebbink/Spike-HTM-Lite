@@ -51,10 +51,11 @@ namespace htm
 				template <typename P>
 				void select_delay_and_cell_to_learn_on(
 					//in
-					Layer<P>& layer, // column cannot be readonly due to the random number generator
+					Layer_Fluent<P>& layer_fluent, // cannot be const due to random generator
+					const Layer_Persisted<P>& layer,
 					const int column_i,
 					const int segment_i,
-					const typename Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer_Fluent<P>::Winner_Cells& winner_cells,
 					const int select_size,
 					//out
 					std::vector<int>& selected_delay_and_cells) // assumes that selected_cells has sufficient capacity (size >= select_size)
@@ -68,7 +69,7 @@ namespace htm
 					const std::vector<int>& delay_and_winner_cells_vector = winner_cells.get_sparse_history();
 					const int n_winner_cells = static_cast<int>(delay_and_winner_cells_vector.size());
 
-					unsigned int random_number = layer.random_number[column_i];
+					unsigned int random_number = layer_fluent.random_number[column_i];
 
 					const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
 					const auto n_synapses = layer.dd_synapse_count_sf[column_i][segment_i];
@@ -121,7 +122,7 @@ namespace htm
 						}
 					}
 
-					layer.random_number[column_i] = random_number;
+					layer_fluent.random_number[column_i] = random_number;
 				}
 
 				//Change the permanence values of DD synapses on the provided segment in the provided column
@@ -142,10 +143,10 @@ namespace htm
 
 					template <typename P>
 					void adapt_segment_ref(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						const auto& dd_synapse_delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i][segment_i];
@@ -163,10 +164,10 @@ namespace htm
 
 					template <typename P>
 					void adapt_segment_ref(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -209,10 +210,10 @@ namespace htm
 
 					template <typename P>
 					void adapt_segment_avx512(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -277,10 +278,10 @@ namespace htm
 
 					template <typename P>
 					void d(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
@@ -293,10 +294,10 @@ namespace htm
 
 					template <typename P>
 					void d(
-						Layer<P>& layer,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Permanence permanence_dec)
 					{
 						assert_msg(segment_i < layer.dd_segment_count[column_i], "TP:grow_DD_synapses: segment_i=", segment_i, " is too large. dd_segment_count=", layer.dd_segment_count[column_i]);
@@ -310,12 +311,13 @@ namespace htm
 				{
 					template <typename P>
 					void grow_DD_synapses_ref(
-						Layer<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
 						const int n_desired_new_synapses,
 						const Dynamic_Param& param,
-						const typename Layer<P>::Winner_Cells& winner_cells)
+						const typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 					{
 						#if _DEBUG
 						if (false) log_INFO("TP:grow_DD_synapses_ref: before: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:", print::print_dd_synapses(layer, column_i));
@@ -405,7 +407,7 @@ namespace htm
 						else
 						{
 							std::vector<int> selected_delay_and_cells(n_exact_new_synapses);
-							select_delay_and_cell_to_learn_on(layer, column_i, segment_i, winner_cells, n_exact_new_synapses, selected_delay_and_cells);
+							select_delay_and_cell_to_learn_on(layer_fluent, layer, column_i, segment_i, winner_cells, n_exact_new_synapses, selected_delay_and_cells);
 							
 							for (int i = 0; i < n_exact_new_synapses; ++i)
 							{
@@ -429,21 +431,23 @@ namespace htm
 
 					template <typename P>
 					void d(
-						Layer<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						Layer_Persisted<P>& layer,
 						const int column_i,
 						const int segment_i,
 						const int n_desired_new_synapses,
 						const Dynamic_Param& param, 
-						const typename Layer<P>::Winner_Cells& winner_cells)
+						const typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 					{
 						assert_msg(segment_i < layer.dd_segment_count[column_i], "TP:grow_DD_synapses: segment_i=", segment_i + " is too large. dd_segment_count=", layer.dd_segment_count[column_i]);
-						grow_DD_synapses_ref(layer, column_i, segment_i, n_desired_new_synapses, param, winner_cells);
+						grow_DD_synapses_ref(layer_fluent, layer, column_i, segment_i, n_desired_new_synapses, param, winner_cells);
 					}
 				}
 
 				template <typename P>
 				int get_least_used_cell(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					const Layer_Persisted<P>& layer,
 					const int column_i)
 				{
 					std::array<int, P::N_CELLS_PC> counter = { 0 };
@@ -454,7 +458,7 @@ namespace htm
 						counter[segment_destination[segment_i]]++;
 					}
 
-					unsigned int random_number = layer.random_number[column_i];
+					unsigned int random_number = layer_fluent.random_number[column_i];
 					int best_cell = 0;
 					int selected_count = counter[0];
 					int num_tied_cells = 1;
@@ -492,18 +496,19 @@ namespace htm
 						}
 						return best_cell;
 					}
-					layer.random_number[column_i] = random_number;
+					layer_fluent.random_number[column_i] = random_number;
 				}
 
 				template <typename P>
 				void create_DD_segment(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int column_i,
 					const int time,
 					const int n_desired_new_synapses,
 					const Dynamic_Param& param,
 					const int8_t cell,
-					const typename Layer<P>::Winner_Cells& winner_cells)
+					const typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 				{
 					if (n_desired_new_synapses <= 0) return; // nothing to do
 
@@ -516,7 +521,7 @@ namespace htm
 
 					if (layer.dd_segment_count[column_i] >= P::TP_N_DD_SEGMENTS_MAX) // no empty segments available, use the least recent used one
 					{
-						const auto& active_time = layer.dd_synapse_active_time[column_i];
+						const auto& active_time = layer_fluent.dd_synapse_active_time[column_i];
 
 						int least_recent_used_time = active_time[0];
 						new_segment_i = 0;
@@ -558,7 +563,7 @@ namespace htm
 						synapse_count.resize(new_capacity, 0);
 
 						layer.dd_segment_destination[column_i].resize(new_capacity);
-						layer.dd_synapse_active_time[column_i].resize(new_capacity);
+						layer_fluent.dd_synapse_active_time[column_i].resize(new_capacity);
 					}
 					#pragma endregion
 
@@ -571,8 +576,8 @@ namespace htm
 
 					layer.dd_segment_destination[column_i][new_segment_i] = cell;
 
-					std::vector<int> selected_delay_and_cells(n_new_synapses, layer.random_number[column_i]);
-					select_delay_and_cell_to_learn_on(layer, column_i, new_segment_i, winner_cells, n_new_synapses, selected_delay_and_cells);
+					std::vector<int> selected_delay_and_cells(n_new_synapses, layer_fluent.random_number[column_i]);
+					select_delay_and_cell_to_learn_on(layer_fluent, layer, column_i, new_segment_i, winner_cells, n_new_synapses, selected_delay_and_cells);
 
 					for (auto synapse_i = 0; synapse_i < n_new_synapses; ++synapse_i)
 					{
@@ -584,25 +589,26 @@ namespace htm
 					assert_msg(n_new_synapses <= dd_synapse_permanence_segment.size(), "TP:create_DD_segment: n_new_synapses=", n_new_synapses, "; while dd_synapse_permanence_segment.size()=", dd_synapse_permanence_segment.size());
 					assert_msg(n_new_synapses <= dd_synapse_delay_origin_segment.size(), "TP:create_DD_segment: n_new_synapses=", n_new_synapses, "; while dd_synapse_origin_segment.size()=", dd_synapse_delay_origin_segment.size());
 
-					layer.dd_synapse_active_time[column_i][new_segment_i] = time;
+					layer_fluent.dd_synapse_active_time[column_i][new_segment_i] = time;
 				}
 
 				template <bool LEARN, typename P>
 				void burst_column(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int column_i,
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const typename Layer<P>::Active_Cells& active_cells,
-					const typename Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer_Fluent<P>::Active_Cells& active_cells,
+					const typename Layer_Fluent<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
 				{
 					if (false) log_INFO_DEBUG("TP:burst_column: column ", column_i, " bursts.");
 
-					const auto& prev_matching_segments = layer.matching_dd_segments[column_i].prev();
+					const auto& prev_matching_segments = layer_fluent.matching_dd_segments[column_i].prev();
 
 					current_active_cells.set_all(); //burst!
 
@@ -613,7 +619,7 @@ namespace htm
 
 					const int winner_cell = (best_matching_segment != -1)
 						? layer.dd_segment_destination[column_i][best_matching_segment]
-						: get_least_used_cell(layer, column_i);
+						: get_least_used_cell(layer_fluent, layer, column_i);
 
 					current_winner_cells.clear_all();
 					current_winner_cells.set(winner_cell, true);
@@ -627,25 +633,26 @@ namespace htm
 
 							const int n_grow_desired = param.TP_DD_MAX_NEW_SYNAPSE_COUNT - best_segment_activity;
 							if (false) log_INFO("TP:burst_column: column ", column_i, " bursts. Found best segment ", best_matching_segment, "; n_grow_desired = ", n_grow_desired);
-							grow_DD_synapses::d(layer, column_i, best_matching_segment, n_grow_desired, param, winner_cells);
+							grow_DD_synapses::d(layer_fluent, layer, column_i, best_matching_segment, n_grow_desired, param, winner_cells);
 						}
 						else // No matching segments found. Grow a new segment and learn on it.
 						{
 							const int n_grow_exact = std::min(param.TP_DD_MAX_NEW_SYNAPSE_COUNT, winner_cells.prev().count());
 							if (false) log_INFO("TP:burst_column: column ", column_i, " bursts. Not found best segment; n_grow_exact = ", n_grow_exact);
-							create_DD_segment(layer, column_i, time, n_grow_exact, param, winner_cell, winner_cells);
+							create_DD_segment(layer_fluent, layer, column_i, time, n_grow_exact, param, winner_cell, winner_cells);
 						}
 					}
 				}
 
 				template <bool LEARN, typename P>
 				void activate_predicted_column(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int column_i,
 					const Dynamic_Param& param,
 					//in
-					const typename Layer<P>::Active_Cells& active_cells,
-					const typename Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer_Fluent<P>::Active_Cells& active_cells,
+					const typename Layer_Fluent<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
@@ -653,7 +660,7 @@ namespace htm
 					current_active_cells.clear_all();
 					current_winner_cells.clear_all();
 
-					const auto& prev_active_segments = layer.active_dd_segments[column_i].prev();
+					const auto& prev_active_segments = layer_fluent.active_dd_segments[column_i].prev();
 					const auto& segment_destination = layer.dd_segment_destination[column_i];
 
 					for (int i = 0; i < prev_active_segments.count(); ++i)
@@ -669,7 +676,7 @@ namespace htm
 
 							const int segment_activity = prev_active_segments.get_activity(i);
 							const int n_grow_desired = param.TP_DD_MAX_NEW_SYNAPSE_COUNT - segment_activity;
-							if (n_grow_desired > 0) grow_DD_synapses::d(layer, column_i, segment_i, n_grow_desired, param, winner_cells);
+							if (n_grow_desired > 0) grow_DD_synapses::d(layer_fluent, layer, column_i, segment_i, n_grow_desired, param, winner_cells);
 						}
 					}
 				}
@@ -677,14 +684,15 @@ namespace htm
 				//Punishes the segments that incorrectly predicted a column to be active.
 				template <typename P>
 				void punish_predicted_column(
-					Layer<P>& layer,
+					const Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int column_i,
 					const Dynamic_Param& param,
-					const typename Layer<P>::Active_Cells& active_cells)
+					const typename Layer_Fluent<P>::Active_Cells& active_cells)
 				{
 					//if (param.TP_DD_PREDICTED_SEGMENT_DEC > 0.0)
 					{
-						const auto& prev_matching_segments = layer.matching_dd_segments[column_i].prev();
+						const auto& prev_matching_segments = layer_fluent.matching_dd_segments[column_i].prev();
 						for (auto i = 0; i < prev_matching_segments.count(); ++i)
 						{
 							const auto segment_i = prev_matching_segments.get_id(i);
@@ -695,24 +703,26 @@ namespace htm
 
 				template <bool LEARN, typename P>
 				void activate_cells_per_column(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int column_i,
 					const int time,
 					const Dynamic_Param& param,
 					//in
 					const bool is_active_column,
-					const typename Layer<P>::Active_Cells& active_cells,
-					const typename Layer<P>::Winner_Cells& winner_cells,
+					const typename Layer_Fluent<P>::Active_Cells& active_cells,
+					const typename Layer_Fluent<P>::Winner_Cells& winner_cells,
 					//out
 					Bitset_Tiny<P::N_CELLS_PC>& current_active_cells,
 					Bitset_Tiny<P::N_CELLS_PC>& current_winner_cells)
 				{
 					if (is_active_column)
 					{
-						const bool is_column_predicted = layer.active_dd_segments[column_i].prev().any();
+						const bool is_column_predicted = layer_fluent.active_dd_segments[column_i].prev().any();
 						if (is_column_predicted)
 						{
 							activate_predicted_column<LEARN>(
+								layer_fluent,
 								layer,
 								column_i,
 								param,
@@ -726,6 +736,7 @@ namespace htm
 						else
 						{
 							burst_column<LEARN>(
+								layer_fluent,
 								layer,
 								column_i,
 								time,
@@ -743,6 +754,7 @@ namespace htm
 						current_active_cells.clear_all();
 						current_winner_cells.clear_all();
 						if (LEARN) punish_predicted_column(
+							layer_fluent,
 							layer,
 							column_i,
 							param,
@@ -752,24 +764,26 @@ namespace htm
 				
 				template <bool LEARN, typename P>
 				void d(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					Layer_Persisted<P>& layer,
 					const int time,
 					const Dynamic_Param& param,
 					//in
-					const typename Layer<P>::Active_Columns& active_columns,
+					const typename Layer_Fluent<P>::Active_Columns& active_columns,
 					//inout
-					typename Layer<P>::Active_Cells& active_cells,
-					typename Layer<P>::Winner_Cells& winner_cells)
+					typename Layer_Fluent<P>::Active_Cells& active_cells,
+					typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 				{
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> active_cells_all_2D;
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> winner_cells_all_2D;
 
 					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
-						layer.active_dd_segments[column_i].advance_time();
-						layer.matching_dd_segments[column_i].advance_time();
+						layer_fluent.active_dd_segments[column_i].advance_time();
+						layer_fluent.matching_dd_segments[column_i].advance_time();
 
 						activate_cells_per_column<LEARN>(
+							layer_fluent,
 							layer,
 							column_i,
 							time,
@@ -842,18 +856,19 @@ namespace htm
 					//Activate dendrites: synapse forward reference implementation
 					template <bool LEARN, typename P>
 					void activate_dendrites_sf_ref(
-						Layer<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const int time,
 						//in
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							auto& active_segments_current = layer.active_dd_segments[column_i].current();
-							auto& matching_segments_current = layer.matching_dd_segments[column_i].current();
+							auto& active_segments_current = layer_fluent.active_dd_segments[column_i].current();
+							auto& matching_segments_current = layer_fluent.matching_dd_segments[column_i].current();
 							const int n_segments = layer.dd_segment_count[column_i];
-							auto& active_time = layer.dd_synapse_active_time[column_i];
+							auto& active_time = layer_fluent.dd_synapse_active_time[column_i];
 							const auto& permanence_segment = layer.dd_synapse_permanence_sf[column_i];
 							const auto& delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i];
 							const auto& synapse_count_segment = layer.dd_synapse_count_sf[column_i];
@@ -901,10 +916,11 @@ namespace htm
 					//Activate dendrites: synapse forward reference implementation
 					template <bool LEARN, typename P>
 					void activate_dendrites_sf_avx512(
-						Layer<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const int time,
 						//in
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						#if _DEBUG
@@ -912,8 +928,8 @@ namespace htm
 						std::vector<Segments_Set> matching_segments_current_org;
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							active_segments_current_org.push_back(Segments_Set(layer.active_dd_segments[column_i].current()));
-							matching_segments_current_org.push_back(Segments_Set(layer.matching_dd_segments[column_i].current()));
+							active_segments_current_org.push_back(Segments_Set(layer.fluent.active_dd_segments[column_i].current()));
+							matching_segments_current_org.push_back(Segments_Set(layer.fluent.matching_dd_segments[column_i].current()));
 						}
 						#endif
 
@@ -922,10 +938,10 @@ namespace htm
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							auto& active_segments_current = layer.active_dd_segments[column_i].current();
-							auto& matching_segments_current = layer.matching_dd_segments[column_i].current();
+							auto& active_segments_current = layer_fluent.active_dd_segments[column_i].current();
+							auto& matching_segments_current = layer_fluent.matching_dd_segments[column_i].current();
 							const int n_segments = layer.dd_segment_count[column_i];
-							auto& active_time = layer.dd_synapse_active_time[column_i];
+							auto& active_time = layer_fluent.dd_synapse_active_time[column_i];
 							const auto& permanence_segment = layer.dd_synapse_permanence_sf[column_i];
 							const auto& delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i];
 							const auto& synapse_count_segment = layer.dd_synapse_count_sf[column_i];
@@ -1032,22 +1048,22 @@ namespace htm
 						std::vector<Segments_Set> matching_segments_current_avx512;
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							active_segments_current_avx512.push_back(Segments_Set(layer.active_dd_segments[column_i].current()));
-							matching_segments_current_avx512.push_back(Segments_Set(layer.matching_dd_segments[column_i].current()));
+							active_segments_current_avx512.push_back(Segments_Set(layer.fluent.active_dd_segments[column_i].current()));
+							matching_segments_current_avx512.push_back(Segments_Set(layer.fluent.matching_dd_segments[column_i].current()));
 
-							layer.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
-							layer.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
+							layer.fluent.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
+							layer.fluent.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
 						}
 						activate_dendrites_sf_ref<LEARN>(layer, time, active_cells, param);
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const auto& active_segments_ref = layer.active_dd_segments[column_i].current()._data;
+							const auto& active_segments_ref = layer.fluent.active_dd_segments[column_i].current()._data;
 							const auto& active_segments_avx512 = active_segments_current_avx512[column_i]._data;
 							for (auto i = 0; i < active_segments_ref.size(); ++i)
 							{
 								if (active_segments_ref[i] != active_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; active_segments_ref ", active_segments_ref[i], " != active_segments_avx512 ", active_segments_avx512[i], ".\n");
 							}
-							const auto& matching_segments_ref = layer.matching_dd_segments[column_i].current()._data;
+							const auto& matching_segments_ref = layer.fluent.matching_dd_segments[column_i].current()._data;
 							const auto& matching_segments_avx512 = matching_segments_current_avx512[column_i]._data;
 							for (auto i = 0; i < matching_segments_ref.size(); ++i)
 							{
@@ -1063,10 +1079,11 @@ namespace htm
 					//Activate dendrites: synapse backward reference implementation
 					template <bool LEARN, typename P>
 					void activate_dendrites_sb_ref(
-						Layer<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						const Layer_Persisted<P>& layer,
 						const int time,
 						//in
-						const typename Layer<P>::Active_Cells& active_cells,
+						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
 						//TODO: investigate whether it is faster to loop over the active cells and determine the synapsic activity
@@ -1110,10 +1127,11 @@ namespace htm
 
 				template <bool LEARN, typename P>
 				void d(
-					Layer<P>& layer,
+					Layer_Fluent<P>& layer_fluent,
+					const Layer_Persisted<P>& layer,
 					const int time,
 					//in
-					const typename Layer<P>::Active_Cells& active_cells,
+					const typename Layer_Fluent<P>::Active_Cells& active_cells,
 					const Dynamic_Param& param)
 				{
 					//log_INFO("activate_dendrites_sf_ref: n_active_cells=", active_cells.count(), "; N_CELLS=", P::N_CELLS, "\n");
@@ -1122,14 +1140,14 @@ namespace htm
 					{
 						switch (architecture_switch(P::ARCH))
 						{
-							case arch_t::X64: return synapse_forward::activate_dendrites_sf_ref<LEARN, P>(layer, time, active_cells, param);
-							case arch_t::AVX512: return synapse_forward::activate_dendrites_sf_avx512<LEARN, P>(layer, time, active_cells, param);
-							default: return synapse_forward::activate_dendrites_sf_ref<LEARN, P>(layer, time, active_cells, param);
+							case arch_t::X64: return synapse_forward::activate_dendrites_sf_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
+							case arch_t::AVX512: return synapse_forward::activate_dendrites_sf_avx512<LEARN>(layer_fluent, layer, time, active_cells, param);
+							default: return synapse_forward::activate_dendrites_sf_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
 						}
 					}
 					else
 					{
-						synapse_backward::activate_dendrites_sb_ref<LEARN, P>(layer, time, active_cells, param);
+						synapse_backward::activate_dendrites_sb_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
 					}
 				}
 			}
@@ -1137,14 +1155,15 @@ namespace htm
 		
 		template <bool LEARN, typename P>
 		void compute_tp(
-			Layer<P>& layer,
+			Layer_Fluent<P>& layer_fluent,
+			Layer_Persisted<P>& layer,
 			const int time,
 			const Dynamic_Param& param,
 			//in
-			const typename Layer<P>::Active_Columns& active_columns,
+			const typename Layer_Fluent<P>::Active_Columns& active_columns,
 			// inout
-			typename Layer<P>::Active_Cells& active_cells,
-			typename Layer<P>::Winner_Cells& winner_cells)
+			typename Layer_Fluent<P>::Active_Cells& active_cells,
+			typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 		{
 			#if _DEBUG
 			//if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
@@ -1152,6 +1171,7 @@ namespace htm
 			#endif
 
 			priv::activate_cells::d<LEARN>(
+				layer_fluent,
 				layer,
 				time,
 				param,
@@ -1167,6 +1187,7 @@ namespace htm
 			#endif
 
 			priv::activate_dendrites::d<LEARN>(
+				layer_fluent,
 				layer,
 				time,
 				active_cells,

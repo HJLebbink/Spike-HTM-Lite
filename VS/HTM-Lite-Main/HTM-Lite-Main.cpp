@@ -66,7 +66,9 @@ inline void test_1layer()
 	param1.show_input_and_prediction_interval = 0;
 
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
-	Layer<P> layer;
+	Layer_Persisted<P> layer;
+	Layer_Fluent<P> layer_fluent;
+
 	DataStream<P> datastream;
 
 	const bool load_from_file = true;
@@ -118,7 +120,7 @@ inline void test_1layer()
 	}
 
 	std::vector<int> prediction_mismatch(param1.show_mismatch_n_futures);
-	htm::layer::run_multiple_times(datastream, layer, param1, prediction_mismatch);
+	htm::layer::run_multiple_times(datastream, layer_fluent, layer, param1, prediction_mismatch);
 }
 
 inline void test_2layers()
@@ -168,15 +170,18 @@ inline void test_2layers()
 	using P1 = Network_Config::P_L1;
 	using P2 = Network_Config::P_L2;
 
-	Layer<P1> layer1;
-	Layer<P2> layer2;
+	Layer_Persisted<P1> layer1;
+	Layer_Persisted<P2> layer2;
+
+	Layer_Fluent<P1> layer1_fluent;
+	Layer_Fluent<P2> layer2_fluent;
 
 	DataStream<P1> datastream;
 	datastream.load_from_file(input_filename, param1);
 
 	auto param = std::array<Dynamic_Param, 2>{param1, param2};
 	std::vector<int> prediction_mismatch(1);
-	htm::network::run_multiple_times(datastream, param, layer1, layer2, prediction_mismatch);
+	htm::network::run_multiple_times(datastream, param, layer1_fluent, layer1, layer2_fluent, layer2, prediction_mismatch);
 }
 
 inline void test_3layers()
@@ -267,16 +272,20 @@ inline void test_3layers()
 	using P2 = Network_Config::P_L2;
 	using P3 = Network_Config::P_L3;
 
-	Layer<P1> layer1;
-	Layer<P2> layer2;
-	Layer<P3> layer3;
+	Layer_Persisted<P1> layer1;
+	Layer_Persisted<P2> layer2;
+	Layer_Persisted<P3> layer3;
+
+	Layer_Fluent<P1> layer1_fluent;
+	Layer_Fluent<P2> layer2_fluent;
+	Layer_Fluent<P3> layer3_fluent;
 
 	DataStream<P1> datastream;
 	datastream.load_from_file(input_filename, param1);
 
 	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
 	std::vector<int> prediction_mismatch(1);
-	htm::network::run_multiple_times(datastream, param, layer1, layer2, layer3, prediction_mismatch);
+	htm::network::run_multiple_times(datastream, param, layer1_fluent, layer1, layer2_fluent, layer2, layer3_fluent, layer3, prediction_mismatch);
 }
 
 inline void test_swarm_1layer()

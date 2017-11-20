@@ -36,7 +36,7 @@ namespace htm
 		{
 		private:
 
-			using data_type = typename Layer<P>::Active_Visible_Sensors;
+			using data_type = typename Layer_Fluent<P>::Active_Visible_Sensors;
 
 			bool use_file_data = false;
 
@@ -184,7 +184,7 @@ namespace htm
 			{
 				return sensors_predictable(1);
 			}
-			void current_sensors(typename Layer<P>::Active_Sensors& sensor_activity) const
+			void current_sensors(typename Layer_Fluent<P>::Active_Sensors& sensor_activity) const
 			{
 				if (this->use_file_data)
 				{
@@ -199,7 +199,7 @@ namespace htm
 			}
 
 			// load the future (next) active sensors
-			void future_sensors(typename Layer<P>::Active_Sensors& sensor_activity, int future) const
+			void future_sensors(typename Layer_Fluent<P>::Active_Sensors& sensor_activity, int future) const
 			{
 				if (this->use_file_data)
 				{
@@ -228,12 +228,12 @@ namespace htm
 			}
 
 			// load the future (next) active sensors
-			void future_sensors(typename Layer<P>::Active_Sensors& sensor_activity) const
+			void future_sensors(typename Layer_Fluent<P>::Active_Sensors& sensor_activity) const
 			{
 				future_sensors(sensor_activity, 1);
 			}
 
-			void future_sensors(typename std::vector<Layer<P>::Active_Sensors>& sensor_activity) const
+			void future_sensors(typename std::vector<Layer_Fluent<P>::Active_Sensors>& sensor_activity) const
 			{
 				const int n_futures = static_cast<int>(sensor_activity.size());
 				for (auto future = 0; future < n_futures; ++future)
