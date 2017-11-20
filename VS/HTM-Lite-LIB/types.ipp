@@ -592,7 +592,6 @@ namespace htm
 						counter++;
 					}
 				}
-
 			}
 
 			bool any() const
@@ -610,7 +609,6 @@ namespace htm
 		};
 
 		//========================================================================
-		
 		// Fluent properties of a layer, the non learned states
 		template <typename P>
 		struct Layer_Fluent
@@ -634,6 +632,10 @@ namespace htm
 
 			//Segments that currently and previously are matching.
 			std::vector<Matching_Segments> matching_dd_segments = std::vector<Matching_Segments>(P::N_COLUMNS);
+
+			//Last time step synapse was active.
+			std::vector<std::vector<int>> dd_synapse_active_time = std::vector<std::vector<int>>(P::N_COLUMNS);
+
 
 			#pragma region Used by SP only
 			//Number of iterations.
@@ -666,16 +668,11 @@ namespace htm
 		template <typename P>
 		struct Layer_Persisted
 		{
-			Layer_Fluent<P> fluent;
-
 			//Number of segments this column currently has in use.
 			std::vector<int> dd_segment_count = std::vector<int>(P::N_COLUMNS);
 
 			//Cell to which this segment belongs to.
 			std::vector<std::vector<int8_t>> dd_segment_destination = std::vector<std::vector<int8_t>>(P::N_COLUMNS);
-
-			//Last time step synapse was active.
-			std::vector<std::vector<int>> dd_synapse_active_time = std::vector<std::vector<int>>(P::N_COLUMNS);
 
 			using t5 = std::vector<std::vector<Permanence, priv::Allocator<Permanence>>>;
 			//Permanence of the synapses of the the provided segment index.
@@ -730,6 +727,10 @@ namespace htm
 				}
 			}
 		};
+
+		template <bool LEARN, typename P>
+		//using Layer_Persisted_C = typename std::conditional<LEARN, Layer_Persisted<P>, const Layer_Persisted<P>>::type;
+		using Layer_Persisted_C = typename std::conditional<LEARN, Layer_Persisted<P>, Layer_Persisted<P>>::type;
 
 
 		#pragma region Copy

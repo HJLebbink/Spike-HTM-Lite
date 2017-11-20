@@ -233,7 +233,7 @@ namespace htm
 				future_sensors(sensor_activity, 1);
 			}
 
-			void future_sensors(typename std::vector<Layer_Fluent<P>::Active_Sensors>& sensor_activity) const
+			void future_sensors(std::vector<typename Layer_Fluent<P>::Active_Sensors>& sensor_activity) const
 			{
 				const int n_futures = static_cast<int>(sensor_activity.size());
 				for (auto future = 0; future < n_futures; ++future)

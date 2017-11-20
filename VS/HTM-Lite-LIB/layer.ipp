@@ -105,7 +105,7 @@ namespace htm
 					template <typename P>
 					void get_predicted_sensors_sf_ref(
 						const Layer_Fluent<P>& layer_fluent,
-						const Layer_Persisted<P>& layer,
+						Layer_Persisted<P>& layer,//TODO: should have been const but ICC does not allow it
 						const Dynamic_Param& param,
 						//out
 						typename Layer_Fluent<P>::Active_Visible_Sensors& predicted_visible_sensor)
@@ -146,10 +146,11 @@ namespace htm
 					void get_predicted_sensors_sf_multifuture_ref(
 						const int time,
 						const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
-						const Layer_Fluent<P>& layer_fluent, const Layer_Persisted<P>& layer,
+						Layer_Fluent<P>& layer_fluent,
+						Layer_Persisted<P>& layer, // should have been const but ICC does not allow it
 						const Dynamic_Param& param,
 						//out
-						typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+						std::vector<typename Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
 					{
 						const int n_futures = static_cast<int>(predicted_visible_sensor.size());
 						auto predicted_sensor_activity = std::vector<int>(P::N_SENSORS, 0);
@@ -162,7 +163,7 @@ namespace htm
 						{
 							assert_msg(false, "NOT implemented yet");
 							//TODO: calling one_step destroys the fluent state of the layer: only the (const) persisted state is needed
-							//priv::one_step<false>(predicted_sensors, layer, time, param);
+							//priv::one_step<false>(predicted_sensors, layer_fluent, layer, time, param);
 
 							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 							{
@@ -202,20 +203,21 @@ namespace htm
 					void get_predicted_sensors_sf_ref(
 						const int time,
 						Layer_Fluent<P>& layer_fluent,
-						const Layer_Persisted<P>& layer,
+						Layer_Persisted<P>& layer, //TODO: should have been const but ICC does not allow it
 						const Dynamic_Param& param,
 						//out
-						typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+						std::vector<typename Layer_Fluent<P>::Active_Visible_Sensors>& predicted_visible_sensor)
 					{
 						if (predicted_visible_sensor.size() == 1)
 							get_predicted_sensors_sf_ref(layer_fluent, layer, param, predicted_visible_sensor[0]);
-							//get_predicted_sensors_sf_multifuture_ref(layer.active_sensors, layer, time, param, predicted_visible_sensor);
+							//get_predicted_sensors_sf_multifuture_ref(time, layer_fluent.active_sensors, layer_fluent, layer, param, predicted_visible_sensor);
 						else
 							get_predicted_sensors_sf_multifuture_ref(time, layer_fluent.active_sensors, layer_fluent, layer, param, predicted_visible_sensor);
 					}
 
 					template <typename P>
 					void get_predicted_sensors_sf_future_X(
+						Layer_Fluent<P>& layer_fluent,
 						const Layer_Persisted<P>& layer,
 						const int future,
 						const Dynamic_Param& param,
@@ -296,10 +298,10 @@ namespace htm
 				void d(
 					const int time,
 					Layer_Fluent<P>& layer_fluent,
-					const Layer_Persisted<P>& layer,
+					Layer_Persisted<P>& layer,//TODO: should have been const but ICC does not allow it
 					const Dynamic_Param& param,
 					//out
-					typename std::vector<Layer_Fluent<P>::Active_Visible_Sensors>& predicted_sensors)
+					std::vector<typename Layer_Fluent<P>::Active_Visible_Sensors>& predicted_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
@@ -318,7 +320,7 @@ namespace htm
 			void calc_mismatch(
 				const int time,
 				Layer_Fluent<P>& layer_fluent,
-				const Layer_Persisted<P>& layer,
+				Layer_Persisted<P>& layer,//TODO: should have been const but ICC does not allow it
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
 				//out
@@ -382,7 +384,7 @@ namespace htm
 			void show_input_and_prediction(
 				const int time,
 				Layer_Fluent<P>& layer_fluent,
-				const Layer_Persisted<P>& layer,
+				Layer_Persisted<P>& layer,//TODO: should have been const but ICC does not allow it
 				const int n_futures,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
@@ -458,7 +460,8 @@ namespace htm
 			template <bool LEARN, typename P>
 			void one_step(
 				const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
-				Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
+				Layer_Fluent<P>& layer_fluent, 
+				Layer_Persisted_C<LEARN, P>& layer,
 				const int time,
 				const Dynamic_Param& param)
 			{
@@ -583,7 +586,7 @@ namespace htm
 		void display_info(
 			const DataStream<P>& datastream,
 			Layer_Fluent<P>& layer_fluent,
-			const Layer_Persisted<P>& layer,
+			Layer_Persisted<P>& layer,//TODO: should have been const but ICC does not allow it
 			const int time,
 			const Dynamic_Param& param,
 			const std::vector<int>& current_mismatch,

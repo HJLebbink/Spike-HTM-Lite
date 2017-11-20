@@ -867,7 +867,8 @@ namespace htm
 		template <bool LEARN, typename P>
 		void compute_sp(
 			const typename Layer_Fluent<P>::Active_Sensors& active_sensors,
-			Layer_Fluent<P>& layer_fluent, Layer_Persisted<P>& layer,
+			Layer_Fluent<P>& layer_fluent, 
+			Layer_Persisted_C<LEARN, P>& layer,
 			const Dynamic_Param& param,
 			//out
 			typename Layer_Fluent<P>::Active_Columns& active_columns)

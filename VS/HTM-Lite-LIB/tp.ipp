@@ -647,7 +647,7 @@ namespace htm
 				template <bool LEARN, typename P>
 				void activate_predicted_column(
 					Layer_Fluent<P>& layer_fluent,
-					Layer_Persisted<P>& layer,
+					Layer_Persisted_C<LEARN, P>& layer,
 					const int column_i,
 					const Dynamic_Param& param,
 					//in
@@ -704,7 +704,7 @@ namespace htm
 				template <bool LEARN, typename P>
 				void activate_cells_per_column(
 					Layer_Fluent<P>& layer_fluent,
-					Layer_Persisted<P>& layer,
+					Layer_Persisted_C<LEARN, P>& layer,
 					const int column_i,
 					const int time,
 					const Dynamic_Param& param,
@@ -765,7 +765,7 @@ namespace htm
 				template <bool LEARN, typename P>
 				void d(
 					Layer_Fluent<P>& layer_fluent,
-					Layer_Persisted<P>& layer,
+					Layer_Persisted_C<LEARN, P>& layer,
 					const int time,
 					const Dynamic_Param& param,
 					//in
@@ -1156,7 +1156,7 @@ namespace htm
 		template <bool LEARN, typename P>
 		void compute_tp(
 			Layer_Fluent<P>& layer_fluent,
-			Layer_Persisted<P>& layer,
+			Layer_Persisted_C<LEARN, P>& layer,
 			const int time,
 			const Dynamic_Param& param,
 			//in
