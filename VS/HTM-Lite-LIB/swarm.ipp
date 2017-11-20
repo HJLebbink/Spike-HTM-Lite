@@ -332,15 +332,16 @@ namespace htm
 				if (!result.flag)
 				{
 					result.flag = true; // using std::atomic_flag would be better...
+					auto total_mismatch = std::vector<int>(1);
 
 					htm::layer::init(layer, result.param[0]);
-					const int total_mismatch = htm::layer::run(datastream, layer, result.param[0]);
+					htm::layer::run(datastream, result.param[0], layer, total_mismatch);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
 						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
 					}
-					result.mismatch = static_cast<float>(total_mismatch) / (result.param[0].n_time_steps * result.param[0].n_times);
+					result.mismatch = static_cast<float>(total_mismatch[0]) / (result.param[0].n_time_steps * result.param[0].n_times);
 					if (!options.quiet) log_INFO(result.str(), "\n");
 					options.writeline_outputfile(result.str());
 				}
@@ -357,16 +358,17 @@ namespace htm
 				if (!result.flag)
 				{
 					result.flag = true; // using std::atomic_flag would be better...
+					auto total_mismatch = std::vector<int>(1);
 
 					htm::layer::init(layer1, result.get_param(0));
 					htm::layer::init(layer2, result.get_param(1));
-					const int total_mismatch = htm::network::run(datastream, result.param, layer1, layer2);
+					htm::network::run(datastream, result.param, layer1, layer2, total_mismatch);
 
 					if (result.mismatch != Configuration<2>::MISMATCH_INVALID)
 					{
 						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
 					}
-					result.mismatch = static_cast<float>(total_mismatch) / (result.param[0].n_time_steps * result.param[0].n_times);
+					result.mismatch = static_cast<float>(total_mismatch[0]) / (result.param[0].n_time_steps * result.param[0].n_times);
 					if (!options.quiet) log_INFO(result.str(), "\n");
 					options.writeline_outputfile(result.str());
 				}
@@ -384,17 +386,18 @@ namespace htm
 				if (!result.flag)
 				{
 					result.flag = true; // using std::atomic_flag would be better...
+					auto total_mismatch = std::vector<int>(1);
 
 					htm::layer::init(layer1, result.get_param(0));
 					htm::layer::init(layer2, result.get_param(1));
 					htm::layer::init(layer3, result.get_param(2));
-					const int total_mismatch = htm::network::run(datastream, result.param, layer1, layer2, layer3);
+					htm::network::run(datastream, result.param, layer1, layer2, layer3, total_mismatch);
 
 					if (result.mismatch != Configuration<1>::MISMATCH_INVALID)
 					{
 						log_WARNING("swarm:do_work: concurrency problem: but not serious, you just did some duplicate work.\n");
 					}
-					result.mismatch = static_cast<float>(total_mismatch) / (result.param[0].n_time_steps * result.param[0].n_times);
+					result.mismatch = static_cast<float>(total_mismatch[0]) / (result.param[0].n_time_steps * result.param[0].n_times);
 					if (!options.quiet) log_INFO(result.str(), "\n");
 					options.writeline_outputfile(result.str());
 				}

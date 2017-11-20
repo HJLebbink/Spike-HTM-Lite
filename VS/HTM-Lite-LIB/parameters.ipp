@@ -209,16 +209,23 @@ namespace htm
 		bool quiet = false;
 
 		//Show the sensor input, the predicted sensor input and the mismatch; zero means off; one means every time step.
-		int show_input_and_predicted_interval = 0;
+		int show_input_and_prediction_interval = 0;
 
 		//Show the predicted mismatch as the average number of misspredicted sensors; zero means off; one means every time step.
 		int show_mismatch_interval = 0;
 
+		//Show the predicted mismatch with the number of futures; 1 means only one future prediction, 2 means to future predictions.
+		int show_mismatch_n_futures = 1;
 
 		int n_visible_sensors_dim1 = 20;
 		int n_visible_sensors_dim2 = 20;
 
 		#pragma region Spacial Pooler stuff
+
+		// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
+		int sensor_threshold = 0;
+
+
 
 		//Initial permanence of a new synapse
 		Permanence SP_PD_PERMANENCE_INIT = 1;

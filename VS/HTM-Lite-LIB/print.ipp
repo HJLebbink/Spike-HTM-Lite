@@ -274,8 +274,8 @@ namespace htm
 		}
 
 		template <typename P>
-		std::string print_sensor_activity(
-			const typename Layer<P>::Active_Sensors& sensor_activity,
+		std::string print_active_sensors(
+			const typename Layer<P>::Active_Sensors& active_sensors,
 			const int width)
 		{
 			int sum = 0;
@@ -288,7 +288,7 @@ namespace htm
 				{
 					if (counter < P::N_SENSORS)
 					{
-						if (sensor_activity.get(counter))
+						if (active_sensors.get(counter))
 						{
 							result << "X";
 							sum++;

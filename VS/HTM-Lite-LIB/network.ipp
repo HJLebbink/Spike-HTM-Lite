@@ -52,7 +52,7 @@ namespace htm
 					{
 						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
 					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
 				}
 				{
@@ -60,7 +60,7 @@ namespace htm
 					{
 						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer1.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
 					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
 				}
 			}
@@ -79,7 +79,7 @@ namespace htm
 					{
 						layer1.active_sensors.set(P1::N_VISIBLE_SENSORS + i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_sensor_activity<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer1:\n", print::print_active_sensors<P1>(layer1.active_sensors, param[0].n_visible_sensors_dim1), "\n");
 					layer::one_step(layer1.active_sensors, layer1, time, param[0]);
 				}
 				{
@@ -93,7 +93,7 @@ namespace htm
 					{
 						layer2.active_sensors.set(P2::N_VISIBLE_SENSORS + i, layer3.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_sensor_activity<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer2:\n", print::print_active_sensors<P2>(layer2.active_sensors, param[1].n_visible_sensors_dim1), "\n");
 					layer::one_step(layer2.active_sensors, layer2, time, param[1]);
 				}
 				{
@@ -102,7 +102,7 @@ namespace htm
 					{
 						layer3.active_sensors.set(i, layer2.active_columns.get(i));
 					}
-					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_sensor_activity<P3>(layer3.active_sensors, param[2].n_visible_sensors_dim1), "\n");
+					if (false) log_INFO_DEBUG("network:run: active sensors at t = ", time, ": Layer3:\n", print::print_active_sensors<P3>(layer3.active_sensors, param[2].n_visible_sensors_dim1), "\n");
 					layer::one_step(layer3.active_sensors, layer3, time, param[2]);
 				}
 			}
@@ -148,96 +148,114 @@ namespace htm
 		};
 
 		template <typename P1, typename P2>
-		int run(
+		void run(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
-			Layer<P2>& layer2)
+			Layer<P2>& layer2,
+			//out
+			std::vector<int>& prediction_mismatch)
 		{
-			const int future = 1;
+			const auto param0 = param[0];
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			tools::clear(prediction_mismatch);
 
-			int total_mismatch = 0;
-			int mismatch = 0;
-			int current_mismatch = 0;
+			auto mismatch = std::vector<int>(n_futures, 0);
+			auto current_mismatch = std::vector<int>(n_futures, 0);
 
-			for (int time = 0; time < param[0].n_time_steps; ++time)
+			for (auto time = 0; time < param0.n_time_steps; ++time)
 			{
 				datastream.current_sensors(layer1.active_sensors);
 				encoder::add_sensor_noise<P1>(layer1.active_sensors);
 				priv::one_step(param, time, layer1, layer2);
-				current_mismatch = layer::priv::calc_mismatch(layer1, future, param[0], datastream);
-				total_mismatch += current_mismatch;
-				layer::display_info(time, datastream, layer1, future, param[0], current_mismatch, mismatch);
+
+				if (n_futures > 0)
+				{
+					layer::priv::calc_mismatch(time, layer1, param0, datastream, current_mismatch);
+					tools::add(prediction_mismatch, current_mismatch);
+					layer::display_info(datastream, layer1, time, param0, current_mismatch, mismatch);
+				}
 				datastream.advance_time();
 			}
-			if (!param[0].quiet) std::cout << std::endl;
-			return total_mismatch;
+			if (!param0.quiet) std::cout << std::endl;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2>
-		int run_multiple_times(
+		void run_multiple_times(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 2>& param,
 			Layer<P1>& layer1,
-			Layer<P2>& layer2)
+			Layer<P2>& layer2,
+			//out
+			std::vector<int>& prediction_mismatch)
 		{
-			int mismatch = 0;
+			tools::clear(prediction_mismatch);
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param[0].n_times; ++i)
 			{
 				layer::init(layer1, param[0]);
 				layer::init(layer2, param[1]);
-				mismatch += run(datastream, param, layer1, layer2);
+				run(datastream, param, layer1, layer2, mismatch);
+				tools::add(prediction_mismatch, mismatch);
 			}
-			return mismatch;
 		}
 
 		template <typename P1, typename P2, typename P3>
-		int run(
+		void run(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
-			Layer<P3>& layer3)
+			Layer<P3>& layer3,
+			std::vector<int>& prediction_mismatch)
 		{
-			const int future = 1;
+			const auto param0 = param[0];
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			tools::clear(prediction_mismatch);
 
-			int total_mismatch = 0;
-			int mismatch = 0;
-			int current_mismatch = 0;
+			auto mismatch = std::vector<int>(n_futures, 0);
+			auto current_mismatch = std::vector<int>(n_futures, 0);
 
-			for (int time = 0; time < param[0].n_time_steps; ++time)
+			for (auto time = 0; time < param0.n_time_steps; ++time)
 			{
 				datastream.current_sensors(layer1.active_sensors);
 				encoder::add_sensor_noise<P1>(layer1.active_sensors);
 				priv::one_step(param, time, layer1, layer2, layer3);
-				current_mismatch = layer::priv::calc_mismatch(layer1, future, param[0], datastream);
-				total_mismatch += current_mismatch;
-				layer::display_info(time, datastream, layer1, future, param[0], current_mismatch, mismatch);
+
+				if (n_futures > 0)
+				{
+					layer::priv::calc_mismatch(time, layer1, param0, datastream, current_mismatch);
+					tools::add(prediction_mismatch, current_mismatch);
+					layer::display_info(datastream, layer1, time, param0, current_mismatch, mismatch);
+				}
 				datastream.advance_time();
 			}
-			if (!param[0].quiet) std::cout << std::endl;
-			return total_mismatch;
+			if (!param0.quiet) std::cout << std::endl;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P1, typename P2, typename P3>
-		int run_multiple_times(
+		void run_multiple_times(
 			const DataStream<P1>& datastream,
 			const std::array<Dynamic_Param, 3>& param,
 			Layer<P1>& layer1,
 			Layer<P2>& layer2,
-			Layer<P3>& layer3)
+			Layer<P3>& layer3,
+			std::vector<int>& prediction_mismatch)
 		{
-			int mismatch = 0;
+			tools::clear(prediction_mismatch);
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param[0].n_times; ++i)
 			{
 				layer::init(layer1, param[0]);
 				layer::init(layer2, param[1]);
 				layer::init(layer3, param[2]);
-				mismatch += run(datastream, param, layer1, layer2, layer3);
+				run(datastream, param, layer1, layer2, layer3, mismatch);
+				tools::add(prediction_mismatch, mismatch);
 			}
-			return mismatch;
 		}
 	}
 }

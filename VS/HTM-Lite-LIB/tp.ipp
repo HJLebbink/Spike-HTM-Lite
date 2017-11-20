@@ -709,9 +709,8 @@ namespace htm
 				{
 					if (is_active_column)
 					{
-						//const bool is_predicted_column = column.active_segments.any_past();
-						const bool is_predicted_column = layer.active_dd_segments[column_i].prev().any();
-						if (is_predicted_column)
+						const bool is_column_predicted = layer.active_dd_segments[column_i].prev().any();
+						if (is_column_predicted)
 						{
 							activate_predicted_column<LEARN>(
 								layer,
@@ -952,10 +951,51 @@ namespace htm
 								{
 									//const __m512i permanence_epi8 = _mm512_stream_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
 									const __m512i permanence_epi8 = _mm512_load_si512(&permanence_epi8_ptr[block]); //load 64 permanence values
-									
-									#pragma ivdep // assumed vector dependencies are ignored
-									for (int i = 0; i < 4; ++i)
+
 									{
+										const int i = 0;
+										const __m128i permanence_epi8_i = _mm512_extracti64x2_epi64(permanence_epi8, i);
+										const __mmask16 connected_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, connected_threshold_epi8);
+
+										if (connected_mask_16 != 0)
+										{
+											const __mmask16 active_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, active_threshold_epi8);
+											const __m512i delay_origin = _mm512_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
+											const __m512i sensors_epi32 = priv::get_sensors_epi32(connected_mask_16, delay_origin, active_cells_ptr);
+											n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
+											n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
+										}
+									}
+									{
+										const int i = 1;
+										const __m128i permanence_epi8_i = _mm512_extracti64x2_epi64(permanence_epi8, i);
+										const __mmask16 connected_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, connected_threshold_epi8);
+
+										if (connected_mask_16 != 0)
+										{
+											const __mmask16 active_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, active_threshold_epi8);
+											const __m512i delay_origin = _mm512_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
+											const __m512i sensors_epi32 = priv::get_sensors_epi32(connected_mask_16, delay_origin, active_cells_ptr);
+											n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
+											n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
+										}
+									}
+									{
+										const int i = 2;
+										const __m128i permanence_epi8_i = _mm512_extracti64x2_epi64(permanence_epi8, i);
+										const __mmask16 connected_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, connected_threshold_epi8);
+
+										if (connected_mask_16 != 0)
+										{
+											const __mmask16 active_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, active_threshold_epi8);
+											const __m512i delay_origin = _mm512_load_si512(&delay_origin_epi32_ptr[(block * 4) + i]);
+											const __m512i sensors_epi32 = priv::get_sensors_epi32(connected_mask_16, delay_origin, active_cells_ptr);
+											n_potential_synapses = _mm512_add_epi32(n_potential_synapses, sensors_epi32);
+											n_active_synapses = _mm512_mask_add_epi32(n_active_synapses, active_mask_16, n_active_synapses, sensors_epi32);
+										}
+									}
+									{
+										const int i = 3;
 										const __m128i permanence_epi8_i = _mm512_extracti64x2_epi64(permanence_epi8, i);
 										const __mmask16 connected_mask_16 = _mm_cmpgt_epi8_mask(permanence_epi8_i, connected_threshold_epi8);
 

@@ -157,5 +157,16 @@ namespace htm
 				inout[r] = tmp;
 			}
 		}
+
+
+		void add(std::vector<int>& a, const std::vector<int>& b)
+		{
+			for (int i = 0; i < static_cast<int>(b.size()); ++i) a[i] += b[i];
+		}
+		void clear(std::vector<int>& a)
+		{
+			for (int i = 0; i < static_cast<int>(a.size()); ++i) a[i] = 0;
+		}
+
 	}
 }

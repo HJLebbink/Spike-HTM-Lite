@@ -55,8 +55,6 @@ namespace htm
 					template <typename P>
 					void get_predicted_sensors_sb_ref(
 						const Layer<P>& layer,
-						const int sensor_threshold,
-						const int future,
 						const Dynamic_Param& param,
 						//out
 						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
@@ -85,7 +83,7 @@ namespace htm
 									if (predicted_columns.get(column_i))
 									{
 										sensor_activity++;
-										if (sensor_activity > sensor_threshold) break;
+										if (sensor_activity > param.sensor_threshold) break;
 									}
 								}
 							}
@@ -95,23 +93,24 @@ namespace htm
 						predicted_sensor.clear_all();
 						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 						{
-							if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
+							if (predicted_sensor_activity[sensor_i] > param.sensor_threshold) predicted_sensor.set(sensor_i, true);
 						}
 					}
-
 				}
+
 				namespace synapse_forward
 				{
+					// predicts sensors one steps into the future
 					template <typename P>
 					void get_predicted_sensors_sf_ref(
 						const Layer<P>& layer,
-						const int sensor_threshold,
-						const int future,
 						const Dynamic_Param& param,
 						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer<P>::Active_Visible_Sensors& predicted_visible_sensor)
 					{
-						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
+						//log_INFO("get_predicted_sensors_sf_ref: active_sensors:\n", print::print_active_sensors<P>(active_sensors, param.n_visible_sensors_dim1));
+
+						auto predicted_visible_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
@@ -128,30 +127,100 @@ namespace htm
 										const auto sensor_i = synapse_origin[synapse_i];
 										if (sensor_i < P::N_VISIBLE_SENSORS)
 										{
-											predicted_sensor_activity[sensor_i]++;
+											predicted_visible_sensor_activity[sensor_i]++;
 										}
 									}
 								}
 							}
 						}
-						predicted_sensor.clear_all();
 						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 						{
-							if (predicted_sensor_activity[sensor_i] > sensor_threshold) predicted_sensor.set(sensor_i, true);
+							predicted_visible_sensor.set(sensor_i, (predicted_visible_sensor_activity[sensor_i] > param.sensor_threshold));
+						}
+					}
+					
+					// predicts sensor multi time steps into the future, 
+					template <typename P>
+					void get_predicted_sensors_sf_multifuture_ref(
+						const int time,
+						const typename Layer<P>::Active_Sensors& active_sensors,
+						Layer<P>& layer, //TODO: add const, sp needs to have an non const layer
+						const Dynamic_Param& param,
+						//out
+						typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+					{
+						const int n_futures = static_cast<int>(predicted_visible_sensor.size());
+						auto predicted_sensor_activity = std::vector<int>(P::N_SENSORS, 0);
+						typename Layer<P>::Active_Sensors predicted_sensors = typename Layer<P>::Active_Sensors(active_sensors);
+						typename Layer<P>::Active_Columns predicted_columns;
+
+						//log_INFO("get_predicted_sensors_sf_multifuture_ref: active_sensors:\n", print::print_active_sensors<P>(layer.active_sensors, param.n_visible_sensors_dim1));
+
+						for (auto future_i = 0; future_i < n_futures; ++future_i)
+						{
+							assert_msg(false, "NOT implemented yet");
+							//TODO: calling one_step destroys the fluent state of the layer: only the (const) persisted state is needed
+							//priv::one_step<false>(predicted_sensors, layer, time, param);
+
+							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+							{
+								const bool column_is_predicted = layer.active_dd_segments[column_i].any_current();
+								//const bool column_is_predicted = predicted_columns.get(column_i);
+								if (column_is_predicted)
+								{
+									const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
+									const auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
+
+									for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+									{
+										if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
+										{
+											const auto sensor_i = synapse_origin[synapse_i];
+											predicted_sensor_activity[sensor_i]++;
+										}
+									}
+								}
+							}
+							if (future_i < (n_futures - 1))
+							{
+								for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+								{
+									predicted_sensors.set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
+								}
+							}
+							for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+							{
+								predicted_visible_sensor[future_i].set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
+							}
 						}
 					}
 
+					// predicts sensors one steps into the future
 					template <typename P>
-					void get_predicted_sensors_sf_future2(
+					void get_predicted_sensors_sf_ref(
+						const int time,
+						Layer<P>& layer, //TODO: add const
+						const Dynamic_Param& param,
+						//out
+						typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_visible_sensor)
+					{
+						if (predicted_visible_sensor.size() == 1)
+							get_predicted_sensors_sf_ref(layer, param, predicted_visible_sensor[0]);
+							//get_predicted_sensors_sf_multifuture_ref(layer.active_sensors, layer, time, param, predicted_visible_sensor);
+						else
+							get_predicted_sensors_sf_multifuture_ref(time, layer.active_sensors, layer, param, predicted_visible_sensor);
+					}
+
+					template <typename P>
+					void get_predicted_sensors_sf_future_X(
 						const Layer<P>& layer,
-						const int sensor_threshold,
 						const int future,
 						const Dynamic_Param& param,
 						//out
-						typename Layer<P>::Active_Visible_Sensors& predicted_sensor)
+						typename Layer<P>::Active_Visible_Sensors& predicted_visible_sensor)
 					{
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
-						auto active_cells = layer.active_cells;
+						auto& active_cells = layer.active_cells;
 
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
@@ -190,7 +259,7 @@ namespace htm
 									if (n_active_synapses > param.TP_DD_SEGMENT_ACTIVE_THRESHOLD)
 									{
 										column_is_predicted = true;
-										break;
+										break; // no need to check any other segments in this column
 									}
 								}
 							}
@@ -211,64 +280,69 @@ namespace htm
 									}
 								}
 							}
-							
+
 							for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 							{
-								predicted_sensor.set(sensor_i, (predicted_sensor_activity[sensor_i] > sensor_threshold));
+								predicted_visible_sensor.set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
 							}
 						}
 					}
 				}
 				
-				//return the number of times a sensor is predicteed.
-				// if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
 				template <typename P>
 				void d(
-					const Layer<P>& layer,
-					const int sensor_threshold,
-					const int future,
+					const int time,
+					Layer<P>& layer, //TODO add const
 					const Dynamic_Param& param,
 					//out
-					typename Layer<P>::Active_Visible_Sensors& predicted_sensors)
+					typename std::vector<Layer<P>::Active_Visible_Sensors>& predicted_sensors)
 				{
 					if (P::SP_SYNAPSE_FORWARD)
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_future2(layer, sensor_threshold, future, param, predicted_sensors);
-						//if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, future, param, predicted_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(layer, sensor_threshold, future, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::get_predicted_sensors_sf_ref(time, layer, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_forward::get_predicted_sensors_sf_ref(time, layer, param, predicted_sensors);
 					}
 					else
 					{
-						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, future, param, predicted_sensors);
-						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer, sensor_threshold, future, param, predicted_sensors);
+						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_backward::get_predicted_sensors_sb_ref(layer, param, predicted_sensors[0]);
+						if (architecture_switch(P::ARCH) == arch_t::AVX512) synapse_backward::get_predicted_sensors_sb_ref(layer, param, predicted_sensors[0]);
 					}
 				}
 			}
 
 			template <typename P>
-			int calc_mismatch(
-				const Layer<P>& layer,
-				const int future,
+			void calc_mismatch(
+				const int time,
+				Layer<P>& layer, // TODO add const
 				const Dynamic_Param& param,
-				const DataStream<P>& datastream)
+				const DataStream<P>& datastream,
+				//out
+				std::vector<int>& mismatch)
 			{
-				// if the next time step is not predictable, there is no mismatch
-				if (!datastream.next_sensors_predictable()) return 0;
+				const int n_futures = static_cast<int>(mismatch.size());
 
-				Layer<P>::Active_Sensors active_sensors;
-				Layer<P>::Active_Visible_Sensors predicted_sensors;
+				typename std::vector<Layer<P>::Active_Sensors> actual_sensors(n_futures);
+				typename std::vector<Layer<P>::Active_Visible_Sensors> predicted_sensors(n_futures);
 
-				const int sensor_threshold = 0; // if the predicted sensor influx is ABOVE (not equal) this threshold, the sensor is said to be active.
-				get_predicted_sensors::d(layer, sensor_threshold, future, param, predicted_sensors);
-				datastream.future_sensors(active_sensors, future);
+				datastream.future_sensors(actual_sensors);
+				get_predicted_sensors::d(time, layer, param, predicted_sensors);
 
-				int mismatch = 0;
-				//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
-				for (auto i = 0; i < P::N_VISIBLE_SENSORS; ++i)
+				for (auto future = 0; future < n_futures; ++future)
 				{
-					if (predicted_sensors.get(i) != active_sensors.get(i)) mismatch++;
+					int mismatch_counter = 0;
+					if (datastream.sensors_predictable(future))
+					{
+						const auto& predicted = predicted_sensors[future];
+						const auto& actual = actual_sensors[future];
+
+						//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
+						for (auto i = 0; i < P::N_VISIBLE_SENSORS; ++i)
+						{
+							if (predicted.get(i) != actual.get(i)) mismatch_counter++;
+						}
+					}
+					mismatch[future] = mismatch_counter;
 				}
-				return mismatch;
 			}
 
 			template <typename P>
@@ -300,43 +374,78 @@ namespace htm
 			}
 
 			template <typename P>
-			void show_progress(
-				const int t,
-				const Layer<P>& layer,
-				const int future,
+			void show_input_and_prediction(
+				const int time,
+				Layer<P>& layer, //TODO: add const
+				const int n_futures,
 				const Dynamic_Param& param,
 				const DataStream<P>& datastream,
 				const typename Layer<P>::Active_Columns& active_columns)
 			{
-				const int progress_frequency = 1;
-				const int sensor_threshold = 1;
-
-				Layer<P>::Active_Visible_Sensors active_visible_sensors;
-				Layer<P>::Active_Sensors active_sensors;
-
-				if ((t % progress_frequency) == 0)
+				if ((time % param.show_input_and_prediction_interval) == 0)
 				{
 					if (true) //print predicted visible sensor activity
 					{
+						typename std::vector<Layer<P>::Active_Visible_Sensors> active_visible_sensors(n_futures);
+						typename std::vector<Layer<P>::Active_Sensors> active_sensors(n_futures);
+
 						std::cout << "=====" << std::endl;
 
-						get_predicted_sensors::d(layer, sensor_threshold, future, param, active_visible_sensors);
-						datastream.future_sensors(active_sensors, future);
+						get_predicted_sensors::d(time, layer, param, active_visible_sensors);
+						datastream.future_sensors(active_sensors);
 
-						std::cout << "at t = " << t << ": predicted sensor activity at (future "<< future<<") t = " << (t + future) << ":" << std::endl;
-						std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
-						std::cout << " | ";
-						std::cout << std::setw(param.n_visible_sensors_dim1) << "correct";
-						std::cout << " | ";
-						std::cout << std::setw(param.n_visible_sensors_dim1) << "mismatch";
-						std::cout << std::endl;
-						std::cout << print::print_visible_sensor_activity2<P>(active_visible_sensors, active_sensors, param.n_visible_sensors_dim1);
+						for (auto future = 0; future < n_futures; ++future)
+						{
+							std::cout << "at t = " << time << ": predicted sensor activity at (future " << future << ") t = " << (time + future) << ":" << std::endl;
+							std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
+							std::cout << " | ";
+							std::cout << std::setw(param.n_visible_sensors_dim1) << "correct";
+							std::cout << " | ";
+							std::cout << std::setw(param.n_visible_sensors_dim1) << "mismatch";
+							std::cout << std::endl;
+							std::cout << print::print_visible_sensor_activity2<P>(active_visible_sensors[0], active_sensors[0], param.n_visible_sensors_dim1);
+						}
 					}
 
 					// print the boost values
 					if (false) log_INFO("boost factors = \n", print::print_boost_factors(layer, P::N_COLUMNS / 20));
 
 					std::cout << "=============================================================" << std::endl;
+				}
+			}
+
+			template <typename P>
+			void show_mismatch(
+				Layer<P>& layer, //TODO: add const
+				const int time,
+				const Dynamic_Param& param,
+				std::vector<int>& mismatch)
+			{
+				const int n_futures = static_cast<int>(mismatch.size());
+				if (n_futures == 1)
+				{
+					if (time == 0) std::cout << "layer:show_mismatch: (future=" << n_futures << "):";
+					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
+					{
+						const float average_mismatch = static_cast<float>(mismatch[0]) / param.show_mismatch_interval;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						tools::clear(mismatch);
+					}
+				}
+				else
+				{
+					if (time == 0) std::cout << "layer:show_mismatch: (future=" << n_futures << "):" << std::endl;
+					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
+					{
+						std::cout << "time " << time << ":";
+						for (auto future = 0; future < n_futures; ++future)
+						{
+							const float average_mismatch = static_cast<float>(mismatch[future]) / param.show_mismatch_interval;
+							std::cout <<"\t"<< std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch ;
+						}
+						std::cout << std::endl;
+						tools::clear(mismatch);
+					}
 				}
 			}
 
@@ -464,77 +573,79 @@ namespace htm
 
 		template <typename P>
 		void display_info(
-			const int time,
 			const DataStream<P>& datastream,
-			const Layer<P>& layer,
-			const int future, 
+			Layer<P>& layer, //TODO: add const
+			const int time,
 			const Dynamic_Param& param,
-			const int current_mismatch,
-			int& mismatch)
+			const std::vector<int>& current_mismatch,
+			std::vector<int>& mismatch)
 		{
+			tools::add(mismatch, current_mismatch);
+
 			if (!param.quiet)
 			{
 				if (param.show_mismatch_interval > 0)
 				{
-					mismatch += current_mismatch;
-
-					if (time == 0) std::cout << "layer:display_info: mismatch: ";
-					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
-					{
-						const float average_mismatch = static_cast<float>(mismatch) / param.show_mismatch_interval;
-						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
-						mismatch = 0;
-					}
+					priv::show_mismatch(layer, time, param, mismatch);
 				}
-				if (param.show_input_and_predicted_interval > 0)
+				if (param.show_input_and_prediction_interval > 0)
 				{
-					priv::show_progress(time, layer, future, param, datastream, layer.active_columns);
+					priv::show_input_and_prediction(time, layer, 1, param, datastream, layer.active_columns);
 				}
 			}
 		}
 
 		//Run the provided layer once, update steps as provided in param
 		template <typename P>
-		int run(
+		void run(
 			const DataStream<P>& datastream,
+			const Dynamic_Param& param,
 			Layer<P>& layer,
-			const Dynamic_Param& param)
+			//out
+			std::vector<int>& prediction_mismatch)
 		{
-			const int future = 1;
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			tools::clear(prediction_mismatch);
 
-			int total_mismatch = 0;
-			int mismatch = 0;
-			int current_mismatch = 0;
+			auto mismatch = std::vector<int>(n_futures, 0);
+			auto current_mismatch = std::vector<int>(n_futures, 0);
 
-			for (int time = 0; time < param.n_time_steps; ++time)
+			for (auto time = 0; time < param.n_time_steps; ++time)
 			{
 				datastream.current_sensors(layer.active_sensors);
 				encoder::add_sensor_noise<P>(layer.active_sensors);
 				one_step(layer.active_sensors, layer, time, param);
-				current_mismatch = priv::calc_mismatch(layer, future, param, datastream);
-				total_mismatch += current_mismatch;
-				display_info(time, datastream, layer, future, param, current_mismatch, mismatch);
+
+				if (n_futures > 0)
+				{
+					layer::priv::calc_mismatch(time, layer, param, datastream, current_mismatch);
+					tools::add(prediction_mismatch, current_mismatch);
+					layer::display_info(datastream, layer, time, param, current_mismatch, mismatch);
+				}
 				datastream.advance_time();
 			}
 			if (!param.quiet) std::cout << std::endl;
-			return total_mismatch;
 		}
 
 		//Run the provided layer a number of times, update steps as provided in param
 		template <typename P>
-		int run_multiple_times(
+		void run_multiple_times(
 			const DataStream<P>& datastream,
 			Layer<P>& layer,
-			const Dynamic_Param& param)
+			const Dynamic_Param& param,
+			//out
+			std::vector<int>& prediction_mismatch)
 		{
-			int mismatch = 0;
+			tools::clear(prediction_mismatch);
+			const int n_futures = static_cast<int>(prediction_mismatch.size());
+			auto mismatch = std::vector<int>(n_futures);
 			for (auto i = 0; i < param.n_times; ++i)
 			{
 				init(layer, param);
 				datastream.reset_time();
-				mismatch += run(datastream, layer, param);
+				run(datastream, param, layer, mismatch);
+				tools::add(prediction_mismatch, mismatch);
 			}
-			return mismatch;
 		}
 	}
 }

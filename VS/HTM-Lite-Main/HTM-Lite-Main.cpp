@@ -44,10 +44,10 @@ inline void test_1layer()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 2 * 8;
+	const int N_BLOCKS = 1 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 7;
+	const int HISTORY_SIZE = 1;
 
 	//const arch_t ARCH = arch_t::X64;
 	const arch_t ARCH = arch_t::RUNTIME;
@@ -55,13 +55,15 @@ inline void test_1layer()
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
 	param1.learn = true;
-	param1.n_time_steps = 500;
+	param1.n_time_steps = 1000;
 	param1.n_times = 1;
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.show_mismatch_interval = 20;
-	param1.show_input_and_predicted_interval = 0;
+	param1.show_mismatch_interval = 40;
+	param1.show_mismatch_n_futures = 1;
+
+	param1.show_input_and_prediction_interval = 0;
 
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
 	Layer<P> layer;
@@ -70,21 +72,21 @@ inline void test_1layer()
 	const bool load_from_file = true;
 	if (load_from_file)
 	{
-		param1.SP_LOCAL_AREA_DENSITY = 0.095;
+		param1.SP_LOCAL_AREA_DENSITY = 0.10000;
 
-		param1.SP_PD_PERMANENCE_INIT = 7;
-		param1.SP_PD_PERMANENCE_INC = 14;
-		param1.SP_PD_PERMANENCE_DEC = 28;
-		param1.SP_PD_PERMANENCE_INC_WEAK = 16;
+		param1.SP_PD_PERMANENCE_INIT = 6;
+		param1.SP_PD_PERMANENCE_INC = 7;
+		param1.SP_PD_PERMANENCE_DEC = 23;
+		param1.SP_PD_PERMANENCE_INC_WEAK = 18;
 
-		param1.TP_DD_PERMANENCE_INIT = 18;
-		param1.TP_DD_PERMANENCE_INC = 18;
-		param1.TP_DD_PERMANENCE_DEC = 11;
-		param1.TP_DD_PREDICTED_SEGMENT_DEC = 22;
+		param1.TP_DD_PERMANENCE_INIT = 12;
+		param1.TP_DD_PERMANENCE_INC = 26;
+		param1.TP_DD_PERMANENCE_DEC = 15;
+		param1.TP_DD_PREDICTED_SEGMENT_DEC = 15;
 
-		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 23;
-		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 14;
-		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 24;
+		param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 22;
+		param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 16;
+		param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 27;
 
 		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
 		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
@@ -114,7 +116,9 @@ inline void test_1layer()
 
 		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
 	}
-	htm::layer::run_multiple_times(datastream, layer, param1);
+
+	std::vector<int> prediction_mismatch(param1.show_mismatch_n_futures);
+	htm::layer::run_multiple_times(datastream, layer, param1, prediction_mismatch);
 }
 
 inline void test_2layers()
@@ -145,7 +149,7 @@ inline void test_2layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.show_input_and_predicted_interval = 1;
+	param1.show_input_and_prediction_interval = 1;
 	param1.show_mismatch_interval = 200;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -171,7 +175,8 @@ inline void test_2layers()
 	datastream.load_from_file(input_filename, param1);
 
 	auto param = std::array<Dynamic_Param, 2>{param1, param2};
-	htm::network::run_multiple_times(datastream, param, layer1, layer2);
+	std::vector<int> prediction_mismatch(1);
+	htm::network::run_multiple_times(datastream, param, layer1, layer2, prediction_mismatch);
 }
 
 inline void test_3layers()
@@ -207,7 +212,7 @@ inline void test_3layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.show_input_and_predicted_interval = 0;
+	param1.show_input_and_prediction_interval = 0;
 	param1.show_mismatch_interval = 20;
 
 	Dynamic_Param param2(param1);
@@ -270,7 +275,8 @@ inline void test_3layers()
 	datastream.load_from_file(input_filename, param1);
 
 	auto param = std::array<Dynamic_Param, 3>{param1, param2, param3};
-	htm::network::run_multiple_times(datastream, param, layer1, layer2, layer3);
+	std::vector<int> prediction_mismatch(1);
+	htm::network::run_multiple_times(datastream, param, layer1, layer2, layer3, prediction_mismatch);
 }
 
 inline void test_swarm_1layer()
@@ -288,7 +294,7 @@ inline void test_swarm_1layer()
 	const int N_BLOCKS = 4 * 8;
 	const int N_COLUMNS = 64 * N_BLOCKS;
 	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 4;
+	const int HISTORY_SIZE = 1;
 
 	const arch_t ARCH = arch_t::RUNTIME;
 
@@ -296,8 +302,6 @@ inline void test_swarm_1layer()
 	param1.learn = true;
 	param1.n_time_steps = 1000;
 	param1.n_times = 1;
-
-	param1.show_input_and_predicted_interval = 0;
 	param1.quiet = true;
 
 	const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -370,7 +374,7 @@ inline void test_swarm_2layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.show_input_and_predicted_interval = 0;
+	param1.show_input_and_prediction_interval = 0;
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
@@ -455,7 +459,7 @@ inline void test_swarm_3layers()
 	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
 	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
 
-	param1.show_input_and_predicted_interval = 0;
+	param1.show_input_and_prediction_interval = 0;
 	param1.quiet = true;
 
 	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 19;
