@@ -19,6 +19,7 @@
 #include <vector>
 #include <algorithm>
 #include <iomanip>      // std::setw
+#include <ratio>
 
 //#include <immintrin.h> // _may_i_use_cpu_feature
 #include <intrin.h>
@@ -63,14 +64,25 @@ namespace htm
 
 	using Permanence = int8_t; // = signed char
 
+	template <int N, int D>
+	float constexpr calc_noise_percentage()
+	{
+		if (N == 0) return 0;
+		if (D == 0) return 0;
+		return (static_cast<float>(N) / D) * 100;
+	}
+
+
 	//========================================================================
 	template <
 		int N_COLUMNS_IN,
 		int N_BITS_CELL_IN,
 		int N_VISIBLE_SENSORS_IN,
-		int N_HIDDEN_SENSORS_IN,
-		int HISTORY_SIZE_IN,
-		arch_t ARCH_IN>
+		int N_HIDDEN_SENSORS_IN = 0,
+		int HISTORY_SIZE_IN = 1,
+		arch_t ARCH_IN = arch_t::X64,
+		typename SENSOR_NOISE_PERCENT_IN = std::ratio<0,100>
+	>
 	struct Static_Param
 	{
 		static_assert(N_COLUMNS_IN > 0, "ERROR: Parameters: provided N_COLUMNS is too small; min N_COLUMNS is 64.");
@@ -151,7 +163,7 @@ namespace htm
 		static constexpr float SP_BOOST_STRENGTH = 0.25;
 
 		//Percentage of noise added to sensors; use zero for no noise.
-		static constexpr int SP_SENSOR_NOISE_PERCENT = 1;
+		static constexpr float SP_SENSOR_NOISE_PERCENT = calc_noise_percentage<SENSOR_NOISE_PERCENT_IN::num, SENSOR_NOISE_PERCENT_IN::den>();
 
 		//Whether the spacial pooler is computed in a forward fashion 
 		static constexpr bool SP_SYNAPSE_FORWARD = true;

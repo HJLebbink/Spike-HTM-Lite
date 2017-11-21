@@ -32,6 +32,71 @@ using namespace htm;
 using namespace htm::types;
 using namespace htm::datastream;
 
+
+inline void test_1layer_200x200_sensors()
+{
+	// static properties: properties that need to be known at compile time:
+
+	const int N_SENSORS_DIM1 = 200;
+	const int N_SENSORS_DIM2 = 200;
+	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	const int N_HIDDEN_SENSORS = 0;
+
+	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	const int N_BLOCKS = 64 * 8;
+	const int N_COLUMNS = 64 * N_BLOCKS;
+	const int N_BITS_CELL = 4;
+	const int HISTORY_SIZE = 2;
+
+	//const arch_t ARCH = arch_t::X64;
+	const arch_t ARCH = arch_t::RUNTIME;
+
+	// dynamic properties: properties that can be changed while the program is running.
+	Dynamic_Param param1;
+	param1.learn = true;
+	param1.n_visible_sensors_dim1 = N_SENSORS_DIM1;
+	param1.n_visible_sensors_dim2 = N_SENSORS_DIM2;
+
+	param1.SP_LOCAL_AREA_DENSITY = 0.085;
+
+	param1.SP_PD_PERMANENCE_INIT = 23;
+	param1.SP_PD_PERMANENCE_INC = 12;
+	param1.SP_PD_PERMANENCE_DEC = 19;
+	param1.SP_PD_PERMANENCE_INC_WEAK = 31;
+
+	param1.TP_DD_PERMANENCE_INIT = 3;
+	param1.TP_DD_PERMANENCE_INC = 4;
+	param1.TP_DD_PERMANENCE_DEC = 13;
+	param1.TP_DD_PREDICTED_SEGMENT_DEC = 29;
+
+	param1.TP_DD_SEGMENT_ACTIVE_THRESHOLD = 25;
+	param1.TP_MIN_DD_ACTIVATION_THRESHOLD = 20;
+	param1.TP_DD_MAX_NEW_SYNAPSE_COUNT = 26;
+
+	param1.n_time_steps = 2000;
+	param1.n_times = 1;
+
+	param1.show_mismatch_interval = 40;
+	param1.show_mismatch_n_futures = 1;
+	param1.show_input_and_prediction_interval = 0;
+
+
+	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
+	Layer_Persisted<P> layer;
+	Layer_Fluent<P> layer_fluent;
+
+	DataStream<P> datastream;
+	const float sensor_sparsity = 0.02f;
+	const int n_sequences = 3;
+	const int sequence_length = 3;
+	datastream.generate_random_NxR(sensor_sparsity, n_sequences, sequence_length);
+
+	std::vector<int> prediction_mismatch(param1.show_mismatch_n_futures);
+	htm::layer::run_multiple_times(datastream, layer_fluent, layer, param1, prediction_mismatch);
+}
+
 inline void test_1layer()
 {
 	// static properties: properties that need to be known at compile time:
@@ -292,8 +357,8 @@ inline void test_swarm_1layer()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSOR_DIM1 = 20;
-	const int N_SENSOR_DIM2 = 20;
+	const int N_SENSOR_DIM1 = 200;
+	const int N_SENSOR_DIM2 = 200;
 	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
 	const int N_HIDDEN_SENSORS = 0;
 
@@ -336,7 +401,7 @@ inline void test_swarm_1layer()
 	auto param = std::array<Dynamic_Param, 1>{param1};
 	DataStream<P> datastream;
 
-	const bool load_from_file = true;
+	const bool load_from_file = false;
 	if (load_from_file)
 	{
 		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
@@ -345,8 +410,8 @@ inline void test_swarm_1layer()
 	}
 	else
 	{
-		const float sparsity = 0.05f;
-		const int n_sequences = 16;
+		const float sparsity = 0.02f;
+		const int n_sequences = 3;
 		const int sequence_length = 3;
 		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
 	}
@@ -526,7 +591,8 @@ inline void test_swarm_3layers()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	if (true) test_1layer();
+	if (true) test_1layer_200x200_sensors();
+	if (false) test_1layer();
 	if (false) test_2layers();
 	if (false) test_3layers();
 	if (false) test_swarm_1layer();

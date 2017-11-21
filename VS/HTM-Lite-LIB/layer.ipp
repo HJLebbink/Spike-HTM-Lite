@@ -436,7 +436,7 @@ namespace htm
 					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
 					{
 						const float average_mismatch = static_cast<float>(mismatch[0]) / param.show_mismatch_interval;
-						std::cout << " " << std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch;
+						std::cout << " " << std::setw(5) << std::setfill(' ') << std::fixed << std::setprecision(2) << average_mismatch;
 						tools::clear(mismatch);
 					}
 				}
@@ -449,7 +449,7 @@ namespace htm
 						for (auto future = 0; future < n_futures; ++future)
 						{
 							const float average_mismatch = static_cast<float>(mismatch[future]) / param.show_mismatch_interval;
-							std::cout <<"\t"<< std::setw(5) << std::setfill(' ') << std::setprecision(2) << average_mismatch ;
+							std::cout <<"\t"<< std::setw(5) << std::setfill(' ') << std::fixed << std::setprecision(2) << average_mismatch ;
 						}
 						std::cout << std::endl;
 						tools::clear(mismatch);
@@ -488,7 +488,7 @@ namespace htm
 					layer_fluent.winner_cells);
 
 				#if _DEBUG
-				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer.fluent.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
+				if (false) log_INFO("layer:run: active columns at t = ", time, ":\n", print::print_active_columns<P>(layer_fluent.active_columns, static_cast<int>(std::sqrt(P::N_COLUMNS))), "\n");
 				if (false) log_INFO("layer:run: dd_synapes at t = ", time, ": ", print::print_dd_synapses(layer), "\n");
 				#endif
 			}

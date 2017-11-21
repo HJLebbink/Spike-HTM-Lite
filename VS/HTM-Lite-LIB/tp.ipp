@@ -928,8 +928,8 @@ namespace htm
 						std::vector<Segments_Set> matching_segments_current_org;
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							active_segments_current_org.push_back(Segments_Set(layer.fluent.active_dd_segments[column_i].current()));
-							matching_segments_current_org.push_back(Segments_Set(layer.fluent.matching_dd_segments[column_i].current()));
+							active_segments_current_org.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
+							matching_segments_current_org.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
 						}
 						#endif
 
@@ -1048,22 +1048,22 @@ namespace htm
 						std::vector<Segments_Set> matching_segments_current_avx512;
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							active_segments_current_avx512.push_back(Segments_Set(layer.fluent.active_dd_segments[column_i].current()));
-							matching_segments_current_avx512.push_back(Segments_Set(layer.fluent.matching_dd_segments[column_i].current()));
+							active_segments_current_avx512.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
+							matching_segments_current_avx512.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
 
-							layer.fluent.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
-							layer.fluent.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
+							layer_fluent.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
+							layer_fluent.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
 						}
-						activate_dendrites_sf_ref<LEARN>(layer, time, active_cells, param);
+						activate_dendrites_sf_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
 						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
-							const auto& active_segments_ref = layer.fluent.active_dd_segments[column_i].current()._data;
+							const auto& active_segments_ref = layer_fluent.active_dd_segments[column_i].current()._data;
 							const auto& active_segments_avx512 = active_segments_current_avx512[column_i]._data;
 							for (auto i = 0; i < active_segments_ref.size(); ++i)
 							{
 								if (active_segments_ref[i] != active_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; active_segments_ref ", active_segments_ref[i], " != active_segments_avx512 ", active_segments_avx512[i], ".\n");
 							}
-							const auto& matching_segments_ref = layer.fluent.matching_dd_segments[column_i].current()._data;
+							const auto& matching_segments_ref = layer_fluent.matching_dd_segments[column_i].current()._data;
 							const auto& matching_segments_avx512 = matching_segments_current_avx512[column_i]._data;
 							for (auto i = 0; i < matching_segments_ref.size(); ++i)
 							{
