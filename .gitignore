@@ -1,7 +1,32 @@
+ Visual Studio 
+**/.vs/**
+**/.vscode/**
+[Bb]in
+[Dd]ebug*/
+**/packages/**
+
+# Generated
+/logs/**
+**.log
+**.cpp.orig
+**.h.orig
+
+# cmake build
+**/build_ninja/**
+/iTLC/build
+/iTLC/debug
+/iTLC/release
+
+# Intel Inspector
+**/My Advisor Results - **
+**/My Amplifier Results - **
+**/My Inspector Results - **
+
+
 #ignore thumbnails created by windows
 Thumbs.db
+
 #Ignore files build by Visual Studio
-*.user
 *.aps
 *.pch
 *.vspscc
@@ -13,10 +38,7 @@ Thumbs.db
 *.cache
 *.ilk
 *.log
-[Bb]in
-[Dd]ebug*/
 *.sbr
-obj/
 [Rr]elease*/
 _ReSharper*/
 *.class

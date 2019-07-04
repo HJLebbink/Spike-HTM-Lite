@@ -37,21 +37,21 @@ inline void test_1layer_200x200_sensors()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSORS_DIM1 = 200;
-	const int N_SENSORS_DIM2 = 200;
-	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int N_HIDDEN_SENSORS = 0;
+	constexpr int N_SENSORS_DIM1 = 200;
+	constexpr int N_SENSORS_DIM2 = 200;
+	constexpr int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	constexpr int N_HIDDEN_SENSORS = 0;
 
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 64 * 8;
-	const int N_COLUMNS = 64 * N_BLOCKS;
-	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 2;
+	constexpr int N_BLOCKS = 16 * 8;
+	constexpr int N_COLUMNS = 64 * N_BLOCKS;
+	constexpr int N_BITS_CELL = 4;
+	constexpr int HISTORY_SIZE = 2;
 
 	//const arch_t ARCH = arch_t::X64;
-	const arch_t ARCH = arch_t::RUNTIME;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;

@@ -1,13 +1,18 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2006
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29021.104
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Spike-Tools-LIB", "Spike-Tools-LIB\Spike-Tools-LIB.vcxproj", "{35094CB1-4279-49F4-9EC0-0E47DC2361A7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTM-Lite-LIB", "HTM-Lite-LIB\HTM-Lite-LIB.vcxproj", "{C6138294-5A22-474A-BC77-0053867F469E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTM-Lite-Main", "HTM-Lite-Main\HTM-Lite-Main.vcxproj", "{228A740C-2A63-48BE-98FA-01AC51F0A245}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D351FD6C-168C-4EEA-AC6E-AFF947F3E99B}"
+	ProjectSection(SolutionItems) = preProject
+		..\.gitignore = ..\.gitignore
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
