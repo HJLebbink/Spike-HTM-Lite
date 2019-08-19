@@ -189,7 +189,7 @@ namespace htm
 					{
 						std::uniform_int_distribution<int> change_dist(-2, 2);
 						const int change = change_dist(engine);
-						const signed char new_value = min_(max, max_(min, value + change));
+						const signed char new_value = static_cast<signed char>(min_(max, max_(min, value + change)));
 						if (false) log_INFO("swarm::mutate_int: change = ", change, "; old value = ", value, "; new_value = ", new_value, "\n");
 						value = new_value;
 					}

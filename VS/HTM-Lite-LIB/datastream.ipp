@@ -40,18 +40,18 @@ namespace htm
 
 			bool use_file_data = false;
 
-			mutable int time = 0;
-			std::vector<data_type> file_data;
+			mutable int time_ = 0;
+			std::vector<data_type> file_data_;
 
-			mutable int sequence_i = 0;
-			mutable int pos_in_sequence = 0;
-			mutable int sequence_i_next = 0;
-			mutable int pos_in_sequence_next = 0;
+			mutable int sequence_i_ = 0;
+			mutable int pos_in_sequence_ = 0;
+			mutable int sequence_i_next_ = 0;
+			mutable int pos_in_sequence_next_ = 0;
 			std::vector<std::vector<data_type>> sequences;
 
-			mutable std::default_random_engine random_engine;
-			mutable std::uniform_int_distribution<unsigned int> random_number_dist;
-			mutable std::uniform_int_distribution<int> random_sequence_dist;
+			mutable std::default_random_engine random_engine_;
+			mutable std::uniform_int_distribution<unsigned int> random_number_dist_;
+			mutable std::uniform_int_distribution<int> random_sequence_dist_;
 
 			data_type create_random(float sparcity, unsigned int random_number) const
 			{
@@ -77,17 +77,17 @@ namespace htm
 				if (pos_in_sequence_next >= static_cast<int>(this->sequences[sequence_i_next].size()))
 				{ // start a new random sequence
 					pos_in_sequence_next = 0;
-					sequence_i_next = this->random_sequence_dist(this->random_engine);
+					sequence_i_next = this->random_sequence_dist_(this->random_engine_);
 				}
 				return std::make_tuple(pos_in_sequence_next, sequence_i_next);
 			}
 
-			std::tuple<int, int> future_time(int pos_in_sequence, int sequence_i, int future) const
+			std::tuple<int, int> future_time(int pos_in_sequence, [[maybe_unused]] int sequence_i, int future) const
 			{
-				int pos_in_sequence_future = this->pos_in_sequence;
-				int sequence_i_future = this->sequence_i;
+				int pos_in_sequence_future = this->pos_in_sequence_;
+				int sequence_i_future = this->sequence_i_;
 
-				for (auto i = 0; i < future; ++i)
+				for (int i = 0; i < future; ++i)
 				{
 					const auto tup = next_time(pos_in_sequence_future, sequence_i_future);
 					pos_in_sequence_future = std::get<0>(tup);
@@ -100,12 +100,12 @@ namespace htm
 			{
 				if (this->use_file_data)
 				{
-					this->time++;
+					this->time_++;
 				}
 				else
 				{
-					this->sequence_i = this->sequence_i_next;
-					this->pos_in_sequence = this->pos_in_sequence_next;
+					this->sequence_i_ = this->sequence_i_next_;
+					this->pos_in_sequence_ = this->pos_in_sequence_next_;
 				}
 			}
 			void update_time_next() const 
@@ -116,9 +116,9 @@ namespace htm
 				}
 				else
 				{
-					const auto tup = next_time(this->pos_in_sequence, this->sequence_i);
-					this->pos_in_sequence_next = std::get<0>(tup);
-					this->sequence_i_next = std::get<1>(tup);
+					const auto tup = next_time(this->pos_in_sequence_, this->sequence_i_);
+					this->pos_in_sequence_next_ = std::get<0>(tup);
+					this->sequence_i_next_ = std::get<1>(tup);
 				}
 			}
 
@@ -133,27 +133,27 @@ namespace htm
 			{
 				if (this->use_file_data)
 				{
-					this->time = 0;
+					this->time_ = 0;
 				}
 				else
 				{
-					this->sequence_i = this->random_sequence_dist(this->random_engine);
-					this->pos_in_sequence = 0;
+					this->sequence_i_ = this->random_sequence_dist_(this->random_engine_);
+					this->pos_in_sequence_ = 0;
 					this->update_time_next();
 				}
 			}
 			void load_from_file(const std::string& filename, const Dynamic_Param& param)
 			{
 				this->use_file_data = true;
-				this->file_data = encoder::encode_pass_through<P>(filename, param);
+				this->file_data_ = encoder::encode_pass_through<P>(filename, param);
 				this->reset_time();
 			}
 			void generate_random_NxR(float sparsity, int n_sequences, int sequence_length)
 			{
 				std::random_device r;
-				this->random_engine = std::default_random_engine(r());
-				this->random_sequence_dist = std::uniform_int_distribution<int>(0, n_sequences-1);
-				this->random_number_dist = std::uniform_int_distribution<unsigned int>(0, 0xFFFFFFFF);
+				this->random_engine_ = std::default_random_engine(r());
+				this->random_sequence_dist_ = std::uniform_int_distribution<int>(0, n_sequences-1);
+				this->random_number_dist_ = std::uniform_int_distribution<unsigned int>(0, 0xFFFFFFFF);
 
 				this->use_file_data = false;
 				for (int sequence_i = 0; sequence_i < n_sequences; ++sequence_i)
@@ -161,7 +161,7 @@ namespace htm
 					std::vector<data_type> sequence;
 					for (int data_i = 0; data_i < sequence_length; ++data_i)
 					{
-						sequence.push_back(create_random(sparsity, this->random_number_dist(this->random_engine)));
+						sequence.push_back(create_random(sparsity, this->random_number_dist_(this->random_engine_)));
 					}
 					this->sequences.push_back(sequence);
 				}
@@ -175,7 +175,7 @@ namespace htm
 				}
 				else
 				{
-					const auto tup = future_time(this->pos_in_sequence_next, this->sequence_i_next, future);
+					const auto tup = future_time(this->pos_in_sequence_next_, this->sequence_i_next_, future);
 					const int pos_in_sequence_future = std::get<1>(tup);
 					return (pos_in_sequence_future != 0);
 				}
@@ -188,13 +188,13 @@ namespace htm
 			{
 				if (this->use_file_data)
 				{
-					const int time_step_max = static_cast<int>(this->file_data.size());
-					const int i = this->time % time_step_max;
-					copy_partial(sensor_activity, this->file_data[i]);
+					const int time_step_max = static_cast<int>(this->file_data_.size());
+					const int i = this->time_ % time_step_max;
+					copy_partial(sensor_activity, this->file_data_[i]);
 				}
 				else
 				{
-					copy_partial(sensor_activity, this->sequences[this->sequence_i][this->pos_in_sequence]);
+					copy_partial(sensor_activity, this->sequences[this->sequence_i_][this->pos_in_sequence_]);
 				}
 			}
 
@@ -203,23 +203,23 @@ namespace htm
 			{
 				if (this->use_file_data)
 				{
-					const int time_step_max = static_cast<int>(this->file_data.size());
-					const int i = (this->time + future) % time_step_max;
-					copy_partial(sensor_activity, this->file_data[i]);
+					const int time_step_max = static_cast<int>(this->file_data_.size());
+					const int i = (this->time_ + future) % time_step_max;
+					copy_partial(sensor_activity, this->file_data_[i]);
 				}
 				else
 				{
 					if (future == 0)
 					{
-						copy_partial(sensor_activity, this->sequences[this->sequence_i][this->pos_in_sequence]);
+						copy_partial(sensor_activity, this->sequences[this->sequence_i_][this->pos_in_sequence_]);
 					}
 					else if (future == 1)
 					{
-						copy_partial(sensor_activity, this->sequences[this->sequence_i_next][this->pos_in_sequence_next]);
+						copy_partial(sensor_activity, this->sequences[this->sequence_i_next_][this->pos_in_sequence_next_]);
 					}
 					else
 					{
-						const auto tup = future_time(this->pos_in_sequence_next, this->sequence_i_next, future);
+						const auto tup = future_time(this->pos_in_sequence_next_, this->sequence_i_next_, future);
 						const int sequence_i_future = std::get<0>(tup);
 						const int pos_in_sequence_future = std::get<1>(tup);
 						copy_partial(sensor_activity, this->sequences[sequence_i_future][pos_in_sequence_future]);

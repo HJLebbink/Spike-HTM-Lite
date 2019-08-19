@@ -660,7 +660,7 @@ namespace htm
 			Layer_Fluent()
 			{
 				this->random_number = std::vector<unsigned int>(P::N_COLUMNS);
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
+				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i) this->random_number[column_i] = random::rdrand32();
 			}
 		};
 

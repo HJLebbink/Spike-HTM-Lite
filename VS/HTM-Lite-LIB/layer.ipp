@@ -64,19 +64,19 @@ namespace htm
 
 						Layer_Fluent<P>::Active_Columns predicted_columns;
 
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							predicted_columns.set(column_i, layer_fluent.active_dd_segments[column_i].any_current());
 						}
 
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+						for (int sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 						{
 							int sensor_activity = 0;
 
 							const auto& permanence = layer.sp_pd_synapse_permanence_sb[sensor_i];
 							const auto& destination_columns = layer.sp_pd_destination_column_sb[sensor_i];
 
-							for (auto synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_sb[sensor_i]; ++synapse_i)
+							for (int synapse_i = 0; synapse_i < layer.sp_pd_synapse_count_sb[sensor_i]; ++synapse_i)
 							{
 								if (permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 								{
@@ -92,7 +92,7 @@ namespace htm
 						}
 
 						predicted_sensor.clear_all();
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+						for (int sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 						{
 							if (predicted_sensor_activity[sensor_i] > param.sensor_threshold) predicted_sensor.set(sensor_i, true);
 						}
@@ -114,7 +114,7 @@ namespace htm
 
 						auto predicted_visible_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							const bool column_is_predicted = layer_fluent.active_dd_segments[column_i].any_current();
 							if (column_is_predicted)
@@ -122,7 +122,7 @@ namespace htm
 								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
 								const auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
 
-								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+								for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 								{
 									if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 									{
@@ -135,7 +135,7 @@ namespace htm
 								}
 							}
 						}
-						for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+						for (int sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 						{
 							predicted_visible_sensor.set(sensor_i, (predicted_visible_sensor_activity[sensor_i] > param.sensor_threshold));
 						}
@@ -159,13 +159,13 @@ namespace htm
 
 						//log_INFO("get_predicted_sensors_sf_multifuture_ref: active_sensors:\n", print::print_active_sensors<P>(layer.active_sensors, param.n_visible_sensors_dim1));
 
-						for (auto future_i = 0; future_i < n_futures; ++future_i)
+						for (int future_i = 0; future_i < n_futures; ++future_i)
 						{
 							assert_msg(false, "NOT implemented yet");
 							//TODO: calling one_step destroys the fluent state of the layer: only the (const) persisted state is needed
 							//priv::one_step<false>(predicted_sensors, layer_fluent, layer, time, param);
 
-							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+							for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 							{
 								const bool column_is_predicted = layer_fluent.active_dd_segments[column_i].any_current();
 								//const bool column_is_predicted = predicted_columns.get(column_i);
@@ -174,7 +174,7 @@ namespace htm
 									const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
 									const auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
 
-									for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+									for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 									{
 										if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 										{
@@ -186,12 +186,12 @@ namespace htm
 							}
 							if (future_i < (n_futures - 1))
 							{
-								for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+								for (int sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 								{
 									predicted_sensors.set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
 								}
 							}
-							for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+							for (int sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 							{
 								predicted_visible_sensor[future_i].set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
 							}
@@ -227,7 +227,7 @@ namespace htm
 						std::vector<int> predicted_sensor_activity = std::vector<int>(P::N_VISIBLE_SENSORS, 0);
 						auto& active_cells = layer.active_cells;
 
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							bool column_is_predicted = false;
 							{
@@ -236,7 +236,7 @@ namespace htm
 								const auto& delay_origin_segment = layer.dd_synapse_delay_origin_sf[column_i];
 								const auto& synapse_count_segment = layer.dd_synapse_count_sf[column_i];
 
-								for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
+								for (int segment_i = 0; segment_i < n_segments; ++segment_i)
 								{
 									const auto& dd_synapse_permanence_segment = permanence_segment[segment_i];
 									const auto& dd_synapse_delay_origin_segment = delay_origin_segment[segment_i];
@@ -244,7 +244,7 @@ namespace htm
 
 									int n_active_synapses = 0;
 
-									for (auto synapse_i = 0; synapse_i < n_synpases; ++synapse_i)
+									for (int synapse_i = 0; synapse_i < n_synpases; ++synapse_i)
 									{
 										const Permanence permanence = dd_synapse_permanence_segment[synapse_i];
 										if (permanence > P::TP_DD_PERMANENCE_THRESHOLD)
@@ -273,7 +273,7 @@ namespace htm
 								const auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
 								const auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
 
-								for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+								for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 								{
 									if (synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 									{
@@ -286,7 +286,7 @@ namespace htm
 								}
 							}
 
-							for (auto sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
+							for (int sensor_i = 0; sensor_i < P::N_VISIBLE_SENSORS; ++sensor_i)
 							{
 								predicted_visible_sensor.set(sensor_i, (predicted_sensor_activity[sensor_i] > param.sensor_threshold));
 							}
@@ -334,7 +334,7 @@ namespace htm
 				datastream.future_sensors(actual_sensors);
 				get_predicted_sensors::d(time, layer_fluent, layer, param, predicted_sensors);
 
-				for (auto future = 0; future < n_futures; ++future)
+				for (int future = 0; future < n_futures; ++future)
 				{
 					int mismatch_counter = 0;
 					if (datastream.sensors_predictable(future))
@@ -343,7 +343,7 @@ namespace htm
 						const auto& actual = actual_sensors[future];
 
 						//TODO: the folling loop can be done by xoring the Active_Visible_Sensors
-						for (auto i = 0; i < P::N_VISIBLE_SENSORS; ++i)
+						for (int i = 0; i < P::N_VISIBLE_SENSORS; ++i)
 						{
 							if (predicted.get(i) != actual.get(i)) mismatch_counter++;
 						}
@@ -360,15 +360,15 @@ namespace htm
 				// out
 				std::vector<int>& inferred_sensor_activity)
 			{
-				for (auto i = 0; i < P::N_VISIBLE_SENSORS; ++i) inferred_sensor_activity[i] = 0;
+				for (int i = 0; i < P::N_VISIBLE_SENSORS; ++i) inferred_sensor_activity[i] = 0;
 
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
 					if (active_columns[column_i])
 					{
 						const Column& column = layer[column_i];
 
-						for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+						for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 						{
 							if (column.pd_synapse_permanence[synapse_i] > P::SP_PD_PERMANENCE_THRESHOLD)
 							{
@@ -402,7 +402,7 @@ namespace htm
 						get_predicted_sensors::d(time, layer_fluent, layer, param, active_visible_sensors);
 						datastream.future_sensors(active_sensors);
 
-						for (auto future = 0; future < n_futures; ++future)
+						for (int future = 0; future < n_futures; ++future)
 						{
 							std::cout << "at t = " << time << ": predicted sensor activity at (future " << future << ") t = " << (time + future) << ":" << std::endl;
 							std::cout << std::setw(param.n_visible_sensors_dim1) << "predicted";
@@ -446,7 +446,7 @@ namespace htm
 					if (((time % param.show_mismatch_interval) == 0) && (time > 0))
 					{
 						std::cout << "time " << time << ":";
-						for (auto future = 0; future < n_futures; ++future)
+						for (int future = 0; future < n_futures; ++future)
 						{
 							const float average_mismatch = static_cast<float>(mismatch[future]) / param.show_mismatch_interval;
 							std::cout <<"\t"<< std::setw(5) << std::setfill(' ') << std::fixed << std::setprecision(2) << average_mismatch ;
@@ -501,13 +501,13 @@ namespace htm
 			// reset pd synapses
 			if (P::SP_SYNAPSE_FORWARD)
 			{
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
 					auto& synapse_origin = layer.sp_pd_synapse_origin_sensor_sf[column_i];
 					auto& synapse_permanence = layer.sp_pd_synapse_permanence_sf[column_i];
 					unsigned int random_number = layer_fluent.random_number[column_i];
 
-					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+					for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
 						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, random_number);
 						synapse_origin[synapse_i] = random_sensor;
@@ -518,15 +518,15 @@ namespace htm
 			}
 			else
 			{
-				for (auto sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
+				for (int sensor_i = 0; sensor_i < P::N_SENSORS; ++sensor_i)
 				{
 					layer.sp_pd_destination_column_sb[sensor_i].clear();
 					layer.sp_pd_synapse_permanence_sb[sensor_i].clear();
 					layer.sp_pd_synapse_count_sb[sensor_i] = 0;
 				}
-				for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+				for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 				{
-					for (auto synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
+					for (int synapse_i = 0; synapse_i < P::SP_N_PD_SYNAPSES; ++synapse_i)
 					{
 						const int random_sensor = random::rand_int32(0, P::N_SENSORS - 1, layer_fluent.random_number[column_i]);
 
@@ -550,7 +550,7 @@ namespace htm
 			}
 
 			//init permanence values
-			for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+			for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 			{
 				// reset dd synapses
 				layer.dd_segment_count[column_i] = 0;
@@ -622,7 +622,7 @@ namespace htm
 			auto mismatch = std::vector<int>(n_futures, 0);
 			auto current_mismatch = std::vector<int>(n_futures, 0);
 
-			for (auto time = 0; time < param.n_time_steps; ++time)
+			for (int time = 0; time < param.n_time_steps; ++time)
 			{
 				datastream.current_sensors(layer_fluent.active_sensors);
 				encoder::add_sensor_noise<P>(layer_fluent.active_sensors);
@@ -651,7 +651,7 @@ namespace htm
 			tools::clear(prediction_mismatch);
 			const int n_futures = static_cast<int>(prediction_mismatch.size());
 			auto mismatch = std::vector<int>(n_futures);
-			for (auto i = 0; i < param.n_times; ++i)
+			for (int i = 0; i < param.n_times; ++i)
 			{
 				init(layer_fluent, layer, param);
 				datastream.reset_time();

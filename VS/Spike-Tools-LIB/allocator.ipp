@@ -73,7 +73,7 @@ namespace tools
 			inline pointer address(reference r) { return &r; }
 			inline const_pointer address(const_reference r) { return &r; }
 
-			pointer allocate(size_type n, const void *hint = 0)
+			pointer allocate(size_type n, [[maybe_unused]] const void *hint = 0)
 			{
 				const auto n_bytes = multiple_N(static_cast<int>(n) * sizeof(T), ALIGN);
 				void * ptr = _mm_malloc(n_bytes, ALIGN);
@@ -88,7 +88,7 @@ namespace tools
 
 				return reinterpret_cast<pointer>(ptr);
 			}
-			void deallocate(pointer p, size_type n)
+			void deallocate(pointer p, [[maybe_unused]] size_type n)
 			{
 				_mm_free(p);
 			}

@@ -23,7 +23,14 @@ namespace tools
 {
 	namespace assert
 	{
-		namespace priv
+		#if _DEBUG
+		constexpr bool DEBUG_ON = true;
+		#else 
+		constexpr bool DEBUG_ON = false;
+		#endif
+
+
+		namespace detail
 		{
 			void addToStream(std::ostringstream&)
 			{
@@ -36,47 +43,47 @@ namespace tools
 				a_stream << std::forward<T>(a_value);
 				addToStream(a_stream, std::forward<Args>(a_args)...);
 			}
-			inline void assert_msg(const std::string& message)
+			inline void assert_msg([[maybe_unused]] const std::string& message)
 			{
-				#if _DEBUG
-				std::cerr << message;
-				//std::cerr << std::flush; // no need to flush cerr
-				if (true)
-				{
-					__debugbreak(); // generate int 3
+				if constexpr (DEBUG_ON) {
+					std::cerr << message;
+					//std::cerr << std::flush; // no need to flush cerr
+					if (true)
+					{
+						__debugbreak(); // generate int 3
+					}
+					else
+					{
+						char dummy;
+						std::cin.get(dummy);
+						//std::abort();
+					}
 				}
-				else
-				{
-					char dummy;
-					std::cin.get(dummy);
-					//std::abort();
-				}
-				#endif
 			}
 		}
 
-		inline void assert_msg(const bool cond)
+		inline void assert_msg([[maybe_unused]] const bool cond)
 		{
-			#if _DEBUG
-			if (!cond)
-			{
-				priv::assert_msg("ASSERT:");
+			if constexpr (DEBUG_ON) {
+				if (!cond)
+				{
+					detail::assert_msg("ASSERT:");
+				}
 			}
-			#endif
 		}
 
 		template<typename... Args>
-		inline void assert_msg(const bool cond, Args&&... a_args)
+		inline void assert_msg([[maybe_unused]] const bool cond, [[maybe_unused]] Args&&... a_args)
 		{
-			#if _DEBUG
-			if (!cond)
-			{
-				std::ostringstream s;
-				s << "----------------------------------" << std::endl << "ASSERT:";
-				priv::addToStream(s, std::forward<Args>(a_args)...);
-				priv::assert_msg(s.str());
+			if constexpr (DEBUG_ON) {
+				if (!cond)
+				{
+					std::ostringstream s;
+					s << "----------------------------------" << std::endl << "ASSERT:";
+					detail::addToStream(s, std::forward<Args>(a_args)...);
+					detail::assert_msg(s.str());
+				}
 			}
-			#endif
 		}
 	}
 }

@@ -45,7 +45,7 @@ inline void test_1layer_200x200_sensors()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	constexpr int N_BLOCKS = 16 * 8;
+	constexpr int N_BLOCKS = 1 * 8;
 	constexpr int N_COLUMNS = 64 * N_BLOCKS;
 	constexpr int N_BITS_CELL = 4;
 	constexpr int HISTORY_SIZE = 2;
@@ -101,21 +101,21 @@ inline void test_1layer()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSORS_DIM1 = 20;
-	const int N_SENSORS_DIM2 = 20;
-	const int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int N_HIDDEN_SENSORS = 0;
+	constexpr int N_SENSORS_DIM1 = 20;
+	constexpr int N_SENSORS_DIM2 = 20;
+	constexpr int N_VISIBLE_SENSORS = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	constexpr int N_HIDDEN_SENSORS = 0;
 
-	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
-	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
-	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS = 1 * 8;
-	const int N_COLUMNS = 64 * N_BLOCKS;
-	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 1;
+	//constexpr int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
+	//constexpr int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
+	//constexpr int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
+	constexpr int N_BLOCKS = 1 * 8;
+	constexpr int N_COLUMNS = 64 * N_BLOCKS;
+	constexpr int N_BITS_CELL = 4;
+	constexpr int HISTORY_SIZE = 1;
 
-	//const arch_t ARCH = arch_t::X64;
-	const arch_t ARCH = arch_t::RUNTIME;
+	//constexpr arch_t ARCH = arch_t::X64;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
@@ -130,6 +130,7 @@ inline void test_1layer()
 
 	param1.show_input_and_prediction_interval = 0;
 
+	constexpr auto p = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>();
 	using P = Static_Param<N_COLUMNS, N_BITS_CELL, N_VISIBLE_SENSORS, N_HIDDEN_SENSORS, HISTORY_SIZE, ARCH>;
 	Layer_Persisted<P> layer;
 	Layer_Fluent<P> layer_fluent;
@@ -161,9 +162,9 @@ inline void test_1layer()
 	}
 	else
 	{
-		const float sparsity = 0.05f;
-		const int n_sequences = 18;
-		const int sequence_length = 3;
+		constexpr float sparsity = 0.05f;
+		constexpr int n_sequences = 18;
+		constexpr int sequence_length = 3;
 
 		param1.SP_LOCAL_AREA_DENSITY = 0.095;
 
@@ -253,26 +254,26 @@ inline void test_3layers()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSORS_DIM1 = 20;
-	const int N_SENSORS_DIM2 = 20;
-	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	constexpr int N_SENSORS_DIM1 = 20;
+	constexpr int N_SENSORS_DIM2 = 20;
+	constexpr int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 
-	const int N_BLOCKS_L1 = 2 * 8;
-	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
-	const int N_BITS_CELL_L1 = 4;
-	const int HISTORY_SIZE_L1 = 7;
+	constexpr int N_BLOCKS_L1 = 2 * 8;
+	constexpr int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	constexpr int N_BITS_CELL_L1 = 4;
+	constexpr int HISTORY_SIZE_L1 = 7;
 
-	const int N_BLOCKS_L2 = 1 * 8;
-	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
-	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_SIZE_L2 = 7;
+	constexpr int N_BLOCKS_L2 = 1 * 8;
+	constexpr int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	constexpr int N_BITS_CELL_L2 = 4;
+	constexpr int HISTORY_SIZE_L2 = 7;
 
-	const int N_BLOCKS_L3 = 1 * 8;
-	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
-	const int N_BITS_CELL_L3 = 4;
-	const int HISTORY_SIZE_L3 = 7;
+	constexpr int N_BLOCKS_L3 = 1 * 8;
+	constexpr int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
+	constexpr int N_BITS_CELL_L3 = 4;
+	constexpr int HISTORY_SIZE_L3 = 7;
 
-	const arch_t ARCH = arch_t::RUNTIME;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
@@ -357,20 +358,20 @@ inline void test_swarm_1layer()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSOR_DIM1 = 200;
-	const int N_SENSOR_DIM2 = 200;
-	const int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
-	const int N_HIDDEN_SENSORS = 0;
+	constexpr int N_SENSOR_DIM1 = 200;
+	constexpr int N_SENSOR_DIM2 = 200;
+	constexpr int N_VISIBLE_SENSORS = N_SENSOR_DIM1 * N_SENSOR_DIM2;
+	constexpr int N_HIDDEN_SENSORS = 0;
 
 	//const int N_BLOCKS = 9; // 1024 columns
 	//const int N_BLOCKS = 4096; // 262144 columns
 	//const int N_BLOCKS = 16384; // 1048576 columns
-	const int N_BLOCKS = 4 * 8;
-	const int N_COLUMNS = 64 * N_BLOCKS;
-	const int N_BITS_CELL = 4;
-	const int HISTORY_SIZE = 1;
+	constexpr int N_BLOCKS = 4 * 8;
+	constexpr int N_COLUMNS = 64 * N_BLOCKS;
+	constexpr int N_BITS_CELL = 4;
+	constexpr int HISTORY_SIZE = 1;
 
-	const arch_t ARCH = arch_t::RUNTIME;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	Dynamic_Param param1;
 	param1.learn = true;
@@ -404,9 +405,9 @@ inline void test_swarm_1layer()
 	const bool load_from_file = false;
 	if (load_from_file)
 	{
-		const std::string input_filename = "../../Misc/data/ABBCBBA_20x20/input.txt";
-		//const std::string input_filename = "../../Misc/data/AAAX_16x16/input.txt";
-		datastream.load_from_file(input_filename, param1);
+		const std::string input_filename2 = "../../Misc/data/ABBCBBA_20x20/input.txt";
+		//const std::string input_filename2 = "../../Misc/data/AAAX_16x16/input.txt";
+		datastream.load_from_file(input_filename2, param1);
 	}
 	else
 	{
@@ -425,20 +426,20 @@ inline void test_swarm_2layers()
 	//const int N_BLOCKS = 8; // 512 columns: use sparsity 0.05 -> 25
 	//const int N_BLOCKS = 4096; // 262144 columns: use sparsity of 0.005 -> 1310
 	//const int N_BLOCKS = 16384; // 1048576 columns: use sparsity of 0.002 -> 2048
-	const int N_BLOCKS_L1 = 1 * 2 * 8;
-	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
-	const int N_BITS_CELL_L1 = 4;
-	const int N_SENSORS_DIM1 = 20;
-	const int N_SENSORS_DIM2 = 20;
-	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
-	const int HISTORY_SIZE_L1 = 7;
+	constexpr int N_BLOCKS_L1 = 1 * 2 * 8;
+	constexpr int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	constexpr int N_BITS_CELL_L1 = 4;
+	constexpr int N_SENSORS_DIM1 = 20;
+	constexpr int N_SENSORS_DIM2 = 20;
+	constexpr int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	constexpr int HISTORY_SIZE_L1 = 7;
 
-	const int N_BLOCKS_L2 = 1 * 1 * 8;
-	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
-	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_SIZE_L2 = 7;
+	constexpr int N_BLOCKS_L2 = 1 * 1 * 8;
+	constexpr int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	constexpr int N_BITS_CELL_L2 = 4;
+	constexpr int HISTORY_SIZE_L2 = 7;
 
-	const arch_t ARCH = arch_t::RUNTIME;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
@@ -504,26 +505,26 @@ inline void test_swarm_3layers()
 {
 	// static properties: properties that need to be known at compile time:
 
-	const int N_SENSORS_DIM1 = 20;
-	const int N_SENSORS_DIM2 = 20;
-	const int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
+	constexpr int N_SENSORS_DIM1 = 20;
+	constexpr int N_SENSORS_DIM2 = 20;
+	constexpr int N_VISIBLE_SENSORS_L1 = N_SENSORS_DIM1 * N_SENSORS_DIM2;
 
-	const int N_BLOCKS_L1 = 2 * 8;
-	const int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
-	const int N_BITS_CELL_L1 = 4;
-	const int HISTORY_SIZE_L1 = 7;
+	constexpr int N_BLOCKS_L1 = 2 * 8;
+	constexpr int N_COLUMNS_L1 = 64 * N_BLOCKS_L1;
+	constexpr int N_BITS_CELL_L1 = 4;
+	constexpr int HISTORY_SIZE_L1 = 7;
 
-	const int N_BLOCKS_L2 = 1 * 8;
-	const int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
-	const int N_BITS_CELL_L2 = 4;
-	const int HISTORY_SIZE_L2 = 7;
+	constexpr int N_BLOCKS_L2 = 1 * 8;
+	constexpr int N_COLUMNS_L2 = 64 * N_BLOCKS_L2;
+	constexpr int N_BITS_CELL_L2 = 4;
+	constexpr int HISTORY_SIZE_L2 = 7;
 
-	const int N_BLOCKS_L3 = 1 * 8;
-	const int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
-	const int N_BITS_CELL_L3 = 4;
-	const int HISTORY_SIZE_L3 = 7;
+	constexpr int N_BLOCKS_L3 = 1 * 8;
+	constexpr int N_COLUMNS_L3 = 64 * N_BLOCKS_L3;
+	constexpr int N_BITS_CELL_L3 = 4;
+	constexpr int HISTORY_SIZE_L3 = 7;
 
-	const arch_t ARCH = arch_t::RUNTIME;
+	constexpr arch_t ARCH = arch_t::RUNTIME;
 
 	// dynamic properties: properties that can be changed while the program is running.
 	Dynamic_Param param1;
@@ -580,9 +581,9 @@ inline void test_swarm_3layers()
 	}
 	else
 	{
-		const float sparsity = 0.1f;
-		const int n_sequences = 3;
-		const int sequence_length = 3;
+		constexpr float sparsity = 0.1f;
+		constexpr int n_sequences = 3;
+		constexpr int sequence_length = 3;
 		datastream.generate_random_NxR(sparsity, n_sequences, sequence_length);
 	}
 	htm::swarm::run_ga<P1, P2, P3>(datastream, param, options);
@@ -591,8 +592,8 @@ inline void test_swarm_3layers()
 int main()
 {
 	const auto start_time = std::chrono::system_clock::now();
-	if (true) test_1layer_200x200_sensors();
-	if (false) test_1layer();
+	if (false) test_1layer_200x200_sensors();
+	if (true) test_1layer();
 	if (false) test_2layers();
 	if (false) test_3layers();
 	if (false) test_swarm_1layer();

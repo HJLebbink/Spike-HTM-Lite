@@ -111,9 +111,8 @@ namespace htm
 		void add_sensor_noise(
 			typename Layer_Fluent<P>::Active_Sensors& active_sensors)
 		{
-			if (P::SP_SENSOR_NOISE_PERCENT > 0)
+			if constexpr (P::SP_SENSOR_NOISE_PERCENT > 0)
 			{
-				//TODO: intel compiler does not support if-consexpr yet
 				#pragma warning( push )
 				#pragma warning( disable : 39)
 				const int range = static_cast<int>(std::floorf(200.0f / P::SP_SENSOR_NOISE_PERCENT) - 1);

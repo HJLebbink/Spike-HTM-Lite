@@ -531,7 +531,7 @@ namespace htm
 						if (architecture_switch(P::ARCH) == arch_t::X64) synapse_forward::calc_overlap_sf_ref(layer, param, active_sensors, overlaps);
 						if (architecture_switch(P::ARCH) == arch_t::AVX512)
 						{
-							if (P::N_SENSORS < 512)
+							if constexpr (P::N_SENSORS < 512)
 							{
 								if (true)
 									synapse_forward::calc_overlap_avx512_sf_small_epi16(layer, param, active_sensors, overlaps);
@@ -558,13 +558,13 @@ namespace htm
 				Permanence add_saturate(Permanence a, Permanence b)
 				{
 					const int result = static_cast<int>(a) + static_cast<int>(b);
-					return (result > 127) ? 127 : result;
+					return (result > 127) ? 127 : static_cast<Permanence>(result);
 				}
 				// assume b is positive
 				Permanence sub_saturate(Permanence a, Permanence b)
 				{
 					const int result = static_cast<int>(a) - static_cast<int>(b);
-					return (result < -128) ? -128 : result;
+					return (result < -128) ? -128 : static_cast<Permanence>(result);
 				}
 
 				namespace synapse_backward
@@ -763,7 +763,7 @@ namespace htm
 				becoming active. and hence encourage participation of more columns in the
 				learning process.
 				*/
-				if (P::SP_GLOBAL_INHIBITION)
+				if constexpr (P::SP_GLOBAL_INHIBITION)
 				{
 					const float target_desity = param.SP_LOCAL_AREA_DENSITY;
 					const float new_boost_factor = exp((target_desity - active_duty_cycle) * P::SP_BOOST_STRENGTH);

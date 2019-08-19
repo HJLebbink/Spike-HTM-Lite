@@ -35,6 +35,12 @@
 //Hierarchical Temporal Memory (HTM)
 namespace htm
 {
+	#if _DEBUG
+	constexpr bool DEBUG_ON = true;
+	#else 
+	constexpr bool DEBUG_ON = false;
+	#endif
+
 	//HTM Temporal Memory/Pooler
 	namespace tp
 	{
@@ -132,13 +138,13 @@ namespace htm
 					Permanence add_saturate(Permanence a, Permanence b)
 					{
 						const int result = static_cast<int>(a) + static_cast<int>(b);
-						return (result > 127) ? 127 : result;
+						return (result > 127) ? 127 : static_cast<Permanence>(result);
 					}
 					// assume b is positive
 					Permanence sub_saturate(Permanence a, Permanence b)
 					{
 						const int result = static_cast<int>(a) - static_cast<int>(b);
-						return (result < -128) ? -128 : result;
+						return (result < -128) ? -128 : static_cast<Permanence>(result);
 					}
 
 					template <typename P>
@@ -217,18 +223,18 @@ namespace htm
 						const Permanence permanence_inc,
 						const Permanence permanence_dec)
 					{
-						#if _DEBUG
-						const bool compare_to_ref = true;
-						std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_org;
-						std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_ref;
-						if (compare_to_ref)
-						{
-							permanence_org = layer.dd_synapse_permanence_sf[column_i][segment_i];
-							adapt_segment_ref(layer, column_i, segment_i, active_cells, permanence_inc, permanence_dec);
-							permanence_ref = layer.dd_synapse_permanence_sf[column_i][segment_i];
-							layer.dd_synapse_permanence_sf[column_i][segment_i] = permanence_org;
+						if constexpr (DEBUG_ON) {
+							const bool compare_to_ref = true;
+							std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_org;
+							std::vector<Permanence, types::priv::Allocator<Permanence>> permanence_ref;
+							if (compare_to_ref)
+							{
+								permanence_org = layer.dd_synapse_permanence_sf[column_i][segment_i];
+								adapt_segment_ref(layer, column_i, segment_i, active_cells, permanence_inc, permanence_dec);
+								permanence_ref = layer.dd_synapse_permanence_sf[column_i][segment_i];
+								layer.dd_synapse_permanence_sf[column_i][segment_i] = permanence_org;
+							}
 						}
-						#endif
 
 						auto permanence_epi8_ptr = reinterpret_cast<__m512i *>(layer.dd_synapse_permanence_sf[column_i][segment_i].data());
 						auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(layer.dd_synapse_delay_origin_sf[column_i][segment_i].data());
@@ -260,20 +266,20 @@ namespace htm
 							permanence_epi8_ptr[block] = _mm512_mask_adds_epi8(old_permanence_epi8, connected_mask_64, old_permanence_epi8, inc_mask);
 						}
 
-						#if _DEBUG
-						if (compare_to_ref)
-						{
-							const auto& permanence_avx512 = layer.dd_synapse_permanence_sf[column_i][segment_i];
-
-							for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
+						if constexpr (DEBUG_ON) {
+							if (compare_to_ref)
 							{
-								if (permanence_ref[synapse_i] != permanence_avx512[synapse_i])
+								const auto& permanence_avx512 = layer.dd_synapse_permanence_sf[column_i][segment_i];
+
+								for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
 								{
-									log_ERROR("TP:adapt_segment_avx512:: UNEQUAL permanence for synapse_i ", synapse_i, ": ref ", static_cast<int>(permanence_ref[synapse_i]), "; avx512 ", static_cast<int>(permanence_avx512[synapse_i]));
+									if (permanence_ref[synapse_i] != permanence_avx512[synapse_i])
+									{
+										log_ERROR("TP:adapt_segment_avx512:: UNEQUAL permanence for synapse_i ", synapse_i, ": ref ", static_cast<int>(permanence_ref[synapse_i]), "; avx512 ", static_cast<int>(permanence_avx512[synapse_i]));
+									}
 								}
 							}
 						}
-						#endif
 					}
 
 					template <typename P>
@@ -319,9 +325,9 @@ namespace htm
 						const Dynamic_Param& param,
 						const typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 					{
-						#if _DEBUG
-						if (false) log_INFO("TP:grow_DD_synapses_ref: before: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:", print::print_dd_synapses(layer, column_i));
-						#endif
+						if constexpr (DEBUG_ON) {
+							if (false) log_INFO("TP:grow_DD_synapses_ref: before: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:", print::print_dd_synapses(layer, column_i));
+						}
 						assert_msg(segment_i < layer.dd_segment_count[column_i], "TP:grow_DD_synapses_ref: segment=", segment_i, " is too large; dd_segment_count=", layer.dd_segment_count[column_i]);
 
 						if (n_desired_new_synapses <= 0) return; // nothing to do
@@ -365,9 +371,9 @@ namespace htm
 							j++;
 						}
 
-						#if _DEBUG
-						for (int i = 0; i < n_desired_new_synapses; ++i) assert_msg(indices_to_update[i] != -1, "TP:grow_DD_synapses_ref: bug D.");
-						#endif
+						if constexpr (DEBUG_ON) {
+							for (int i = 0; i < n_desired_new_synapses; ++i) assert_msg(indices_to_update[i] != -1, "TP:grow_DD_synapses_ref: bug D.");
+						}
 
 						int overflow = 0;
 						if (k > 0)
@@ -417,16 +423,16 @@ namespace htm
 							}
 						}
 
-						#if _DEBUG
-						for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
-						{
-							const auto origin = get_global_cell_id(dd_synapse_delay_origin_segment[synapse_i]);
-							assert_msg(origin >= 0, "TP:grow_DD_synapses_ref: invalid origin ", origin);
-							assert_msg(origin < P::N_CELLS, "TP:grow_DD_synapses_ref: invalid origin ", origin);
+						if constexpr (DEBUG_ON) {
+							for (auto synapse_i = 0; synapse_i < layer.dd_synapse_count_sf[column_i][segment_i]; ++synapse_i)
+							{
+								const auto origin = get_global_cell_id(dd_synapse_delay_origin_segment[synapse_i]);
+								assert_msg(origin >= 0, "TP:grow_DD_synapses_ref: invalid origin ", origin);
+								assert_msg(origin < P::N_CELLS, "TP:grow_DD_synapses_ref: invalid origin ", origin);
+							}
+							if (false) log_INFO("TP:grow_DD_synapses_ref: column ", column_i, "; segment_i ", segment_i, "; done replacing ", n_desired_new_synapses, " synapses.");
+							if (false) log_INFO("TP:grow_DD_synapses_ref: after: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:\n", print::print_dd_synapses(layer, column_i));
 						}
-						if (false) log_INFO("TP:grow_DD_synapses_ref: column ", column_i, "; segment_i ", segment_i, "; done replacing ", n_desired_new_synapses, " synapses.");
-						if (false) log_INFO("TP:grow_DD_synapses_ref: after: column ", column_i, "; segment_i ", segment_i, "; dd_synapses:\n", print::print_dd_synapses(layer, column_i));
-						#endif
 					}
 
 					template <typename P>
@@ -624,7 +630,7 @@ namespace htm
 					current_winner_cells.clear_all();
 					current_winner_cells.set(winner_cell, true);
 
-					if (LEARN)
+					if constexpr (LEARN)
 					{
 						if (best_matching_segment != -1) // found a best matching segment
 						{
@@ -777,7 +783,7 @@ namespace htm
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> active_cells_all_2D;
 					Bitset2<P::N_COLUMNS, P::N_CELLS_PC> winner_cells_all_2D;
 
-					for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+					for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 					{
 						layer_fluent.active_dd_segments[column_i].advance_time();
 						layer_fluent.matching_dd_segments[column_i].advance_time();
@@ -863,7 +869,7 @@ namespace htm
 						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							auto& active_segments_current = layer_fluent.active_dd_segments[column_i].current();
 							auto& matching_segments_current = layer_fluent.matching_dd_segments[column_i].current();
@@ -923,20 +929,20 @@ namespace htm
 						const typename Layer_Fluent<P>::Active_Cells& active_cells,
 						const Dynamic_Param& param)
 					{
-						#if _DEBUG
-						std::vector<Segments_Set> active_segments_current_org;
-						std::vector<Segments_Set> matching_segments_current_org;
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-						{
-							active_segments_current_org.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
-							matching_segments_current_org.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
+						if constexpr (DEBUG_ON) {
+							std::vector<Segments_Set> active_segments_current_org;
+							std::vector<Segments_Set> matching_segments_current_org;
+							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+							{
+								active_segments_current_org.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
+								matching_segments_current_org.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
+							}
 						}
-						#endif
 
 						const __m128i connected_threshold_epi8 = _mm_set1_epi8(P::TP_DD_CONNECTED_THRESHOLD);
 						const __m128i active_threshold_epi8 = _mm_set1_epi8(P::TP_DD_PERMANENCE_THRESHOLD);
 
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+						for (int column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 						{
 							auto& active_segments_current = layer_fluent.active_dd_segments[column_i].current();
 							auto& matching_segments_current = layer_fluent.matching_dd_segments[column_i].current();
@@ -951,7 +957,7 @@ namespace htm
 							matching_segments_current.reset();
 
 							#pragma ivdep // assumed vector dependencies are ignored
-							for (auto segment_i = 0; segment_i < n_segments; ++segment_i)
+							for (int segment_i = 0; segment_i < n_segments; ++segment_i)
 							{
 								auto permanence_epi8_ptr = reinterpret_cast<const __m512i *>(permanence_segment[segment_i].data());
 								auto delay_origin_epi32_ptr = reinterpret_cast<const __m512i *>(delay_origin_segment[segment_i].data());
@@ -1043,34 +1049,34 @@ namespace htm
 							}
 						}
 
-						#if _DEBUG
-						std::vector<Segments_Set> active_segments_current_avx512;
-						std::vector<Segments_Set> matching_segments_current_avx512;
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-						{
-							active_segments_current_avx512.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
-							matching_segments_current_avx512.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
+						if constexpr (DEBUG_ON) {
+							std::vector<Segments_Set> active_segments_current_avx512;
+							std::vector<Segments_Set> matching_segments_current_avx512;
+							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
+							{
+								active_segments_current_avx512.push_back(Segments_Set(layer_fluent.active_dd_segments[column_i].current()));
+								matching_segments_current_avx512.push_back(Segments_Set(layer_fluent.matching_dd_segments[column_i].current()));
 
-							layer_fluent.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
-							layer_fluent.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
-						}
-						activate_dendrites_sf_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
-						for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
-						{
-							const auto& active_segments_ref = layer_fluent.active_dd_segments[column_i].current()._data;
-							const auto& active_segments_avx512 = active_segments_current_avx512[column_i]._data;
-							for (auto i = 0; i < active_segments_ref.size(); ++i)
-							{
-								if (active_segments_ref[i] != active_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; active_segments_ref ", active_segments_ref[i], " != active_segments_avx512 ", active_segments_avx512[i], ".\n");
+								layer_fluent.active_dd_segments[column_i].current()._data = active_segments_current_org[column_i]._data;
+								layer_fluent.matching_dd_segments[column_i].current()._data = matching_segments_current_org[column_i]._data;
 							}
-							const auto& matching_segments_ref = layer_fluent.matching_dd_segments[column_i].current()._data;
-							const auto& matching_segments_avx512 = matching_segments_current_avx512[column_i]._data;
-							for (auto i = 0; i < matching_segments_ref.size(); ++i)
+							activate_dendrites_sf_ref<LEARN>(layer_fluent, layer, time, active_cells, param);
+							for (auto column_i = 0; column_i < P::N_COLUMNS; ++column_i)
 							{
-								if (matching_segments_ref[i] != matching_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; matching_segments_ref ", matching_segments_ref[i], " != matching_segments_avx512 ", matching_segments_avx512[i], ".\n");
+								const auto& active_segments_ref = layer_fluent.active_dd_segments[column_i].current()._data;
+								const auto& active_segments_avx512 = active_segments_current_avx512[column_i]._data;
+								for (auto i = 0; i < active_segments_ref.size(); ++i)
+								{
+									if (active_segments_ref[i] != active_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; active_segments_ref ", active_segments_ref[i], " != active_segments_avx512 ", active_segments_avx512[i], ".\n");
+								}
+								const auto& matching_segments_ref = layer_fluent.matching_dd_segments[column_i].current()._data;
+								const auto& matching_segments_avx512 = matching_segments_current_avx512[column_i]._data;
+								for (auto i = 0; i < matching_segments_ref.size(); ++i)
+								{
+									if (matching_segments_ref[i] != matching_segments_avx512[i]) log_ERROR("SP:activate_dendrites_sf_avx512:: UNEQUAL: column ", column_i, "; matching_segments_ref ", matching_segments_ref[i], " != matching_segments_avx512 ", matching_segments_avx512[i], ".\n");
+								}
 							}
 						}
-						#endif
 					}
 				}
 
@@ -1136,7 +1142,7 @@ namespace htm
 				{
 					//log_INFO("activate_dendrites_sf_ref: n_active_cells=", active_cells.count(), "; N_CELLS=", P::N_CELLS, "\n");
 
-					if (P::TP_SYNAPSE_FORWARD)
+					if constexpr (P::TP_SYNAPSE_FORWARD)
 					{
 						switch (architecture_switch(P::ARCH))
 						{
@@ -1165,10 +1171,10 @@ namespace htm
 			typename Layer_Fluent<P>::Active_Cells& active_cells,
 			typename Layer_Fluent<P>::Winner_Cells& winner_cells)
 		{
-			#if _DEBUG
-			//if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
-			//if (false) log_INFO("TP:compute_tp: prev_active_cells: ", print::print_active_cells(active_cells.prev()));
-			#endif
+			if constexpr (DEBUG_ON) {
+				//if (false) log_INFO("TP:compute_tp: prev_winner_cells: ", print::print_active_cells(winner_cells.prev()));
+				//if (false) log_INFO("TP:compute_tp: prev_active_cells: ", print::print_active_cells(active_cells.prev()));
+			}
 
 			priv::activate_cells::d<LEARN>(
 				layer_fluent,
@@ -1181,10 +1187,10 @@ namespace htm
 				active_cells,
 				winner_cells);
 
-			#if _DEBUG
-			//if (true) log_INFO("TP:compute_tp: active_cells current: time = ", time, ":", print::print_active_cells<P>(active_cells));
-			//if (false) log_INFO("TP:compute_tp: winner_cells current: time = ", time, ":", print::print_active_cells(winner_cells.current()));
-			#endif
+			if constexpr (DEBUG_ON) {
+				//if (true) log_INFO("TP:compute_tp: active_cells current: time = ", time, ":", print::print_active_cells<P>(active_cells));
+				//if (false) log_INFO("TP:compute_tp: winner_cells current: time = ", time, ":", print::print_active_cells(winner_cells.current()));
+			}
 
 			priv::activate_dendrites::d<LEARN>(
 				layer_fluent,
@@ -1193,9 +1199,9 @@ namespace htm
 				active_cells,
 				param);
 
-			#if _DEBUG
-			if (false) log_INFO("TP:compute_tp: all synapses: time = ", time, ":", print::print_dd_synapses(layer));
-			#endif
+			if constexpr (DEBUG_ON) {
+				if (false) log_INFO("TP:compute_tp: all synapses: time = ", time, ":", print::print_dd_synapses(layer));
+			}
 		}
 	}
 }

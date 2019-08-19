@@ -22,6 +22,12 @@
 
 namespace tools
 {
+	#if _DEBUG
+	constexpr bool DEBUG_ON = true;
+	#else 
+	constexpr bool DEBUG_ON = false;
+	#endif
+
 	namespace log
 	{
 		namespace priv
@@ -118,27 +124,27 @@ namespace tools
 			priv::addToStream(s, std::forward<Args>(a_args)...);
 			log_INFO(s.str(), PAUSE);
 		}
-		inline void log_INFO_DEBUG(const std::string message, const bool pause = false)
+		inline void log_INFO_DEBUG([[maybe_unused]] const std::string& message, [[maybe_unused]] const bool pause = false)
 		{
-			#if _DEBUG
-			priv::log_screen.lock();
-			std::cout << "INFO:" << message << std::flush;
-			priv::log_screen.unlock();
-			if (pause)
-			{
-				char dummy;
-				std::cin.get(dummy);
+			if constexpr (DEBUG_ON) {
+				priv::log_screen.lock();
+				std::cout << "INFO:" << message << std::flush;
+				priv::log_screen.unlock();
+				if (pause)
+				{
+					char dummy;
+					std::cin.get(dummy);
+				}
 			}
-			#endif
 		}
 		template<bool PAUSE = false, typename... Args >
-		inline void log_INFO_DEBUG(Args&&... a_args)
+		inline void log_INFO_DEBUG([[maybe_unused]] Args&&... a_args)
 		{
-			#if _DEBUG
-			std::ostringstream s;
-			priv::addToStream(s, std::forward<Args>(a_args)...);
-			log_INFO_DEBUG(s.str(), PAUSE);
-			#endif
+			if constexpr (DEBUG_ON) {
+				std::ostringstream s;
+				priv::addToStream(s, std::forward<Args>(a_args)...);
+				log_INFO_DEBUG(s.str(), PAUSE);
+			}
 		}
 	}
 }

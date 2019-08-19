@@ -55,7 +55,7 @@ namespace htm
 			#if __INTEL_COMPILER
 			return (_may_i_use_cpu_feature(_FEATURE_AVX512F) == 1) ? arch_t::AVX512 : arch_t::X64;
 			#else
-			log_WARNING("architecture_switch: could not determine desired architecture at runtime: assuming AVX512.\n");
+			//log_WARNING("architecture_switch: could not determine desired architecture at runtime: assuming AVX512.\n");
 			return arch_t::AVX512;
 			#endif
 		}
@@ -65,10 +65,10 @@ namespace htm
 	using Permanence = int8_t; // = signed char
 
 	template <int N, int D>
-	float constexpr calc_noise_percentage()
+	float constexpr calc_noise_percentage() noexcept
 	{
-		if (N == 0) return 0;
-		if (D == 0) return 0;
+		if constexpr (N == 0) return 0;
+		if constexpr (D == 0) return 0;
 		return (static_cast<float>(N) / D) * 100;
 	}
 
